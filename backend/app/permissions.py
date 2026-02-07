@@ -63,16 +63,26 @@ def can_manage_departments(current_user: User) -> bool:
     return current_user.role == UserRole.super_admin
 
 
+def can_view_departments(current_user: User) -> bool:
+    """Check if user can view departments (not viewer)"""
+    return current_user.role != UserRole.viewer
+
+
 def can_assign_tickets(current_user: User) -> bool:
     """Check if user can assign tickets (supervisor and super_admin)"""
     return current_user.role in [UserRole.super_admin, UserRole.supervisor]
 
 
 def can_view_all_tickets(current_user: User) -> bool:
-    """Check if user can view all tickets (not just assigned)"""
-    return current_user.role in [UserRole.super_admin, UserRole.supervisor, UserRole.viewer]
+    """Check if user can view all tickets (not just assigned or created by them)"""
+    return current_user.role in [UserRole.super_admin, UserRole.supervisor]
 
 
 def can_create_equipment(current_user: User) -> bool:
     """Check if user can create equipment"""
     return current_user.role in [UserRole.super_admin, UserRole.supervisor]
+
+
+def can_view_equipment(current_user: User) -> bool:
+    """Check if user can view equipment (not viewer)"""
+    return current_user.role != UserRole.viewer

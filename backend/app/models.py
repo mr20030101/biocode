@@ -78,7 +78,11 @@ class User(Base, TimestampMixin):
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False, default=UserRole.tech)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
+    department_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
+    )
 
+    department: Mapped[Optional["Department"]] = relationship()
     created_logs: Mapped[list["EquipmentLog"]] = relationship(
         back_populates="created_by_user", cascade="all,delete-orphan"
     )
@@ -294,4 +298,29 @@ class TicketResponse(Base, TimestampMixin):
 
     ticket: Mapped["Ticket"] = relationship(back_populates="response")
     engineer_user: Mapped[Optional["User"]] = relationship()
+
+
+class MaintenanceSchedule(Base, TimestampMixin):
+    """
+    Scheduled maintenance for equipment (preventive maintenance, calibration, etc.)
+    """
+
+    __tablename__ = "maintenance_schedules"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid_str)
+    equipment_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    maintenance_type: Mapped[str] = mapped_column(String(50), nullable=False)
+    frequency_days: Mapped[int] = mapped_column(Integer, nullable=False)
+    last_maintenance_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    next_maintenance_date: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
+    assigned_to_user_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+    equipment: Mapped["Equipment"] = relationship()
+    assigned_to_user: Mapped[Optional["User"]] = relationship()
 

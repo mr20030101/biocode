@@ -23,6 +23,15 @@ A comprehensive web application for managing biomedical equipment, service ticke
 - Filter by status, department, and search
 - View detailed equipment information
 - Department assignment
+- **Scheduled maintenance tracking**
+
+### Maintenance Schedules
+- **Create preventive maintenance schedules**
+- **Track calibration and inspection schedules**
+- **View overdue and upcoming maintenance**
+- **Assign maintenance to technicians**
+- **Automatic next maintenance date calculation**
+- **Maintenance statistics dashboard**
 
 ### Ticket Management
 - Create and manage service tickets
@@ -42,7 +51,7 @@ A comprehensive web application for managing biomedical equipment, service ticke
 - User creation and management
 - Activate/Deactivate users
 - Performance tracking for technicians
-- Monthly performance reports
+- Department assignments
 
 ### Dashboard
 - Role-specific dashboards
@@ -147,12 +156,17 @@ python seed_database.py
 ```
 
 This creates:
-- 6 users (1 super_admin, 2 supervisors, 2 techs, 1 viewer)
-- 8 departments
+- 9 users:
+  - 1 Super Admin (Owner - no department)
+  - 1 Supervisor (IT Department)
+  - 3 Techs (IT Department)
+  - 4 Viewers (assigned to ED, ICU, Radiology, Cardiology)
+- 9 departments (including IT Department)
 - 10 locations
 - 22 equipment items
 - 15 tickets
 - Equipment logs and history
+- 21 maintenance schedules (with overdue, upcoming, and future schedules)
 
 ## Running the Application
 
@@ -202,30 +216,36 @@ Open your browser and navigate to: `http://localhost:5173`
 
 ### Viewer
 - Read-only access
-- Can create tickets
+- Can create tickets (can select equipment from dropdown)
+- **Can only view tickets they created**
+- **Cannot access Equipment or Departments pages**
 - Cannot update ticket status to Resolved or Closed
 - Cannot create departments or equipment
-- View all tickets and equipment
 
 ## Default Credentials
 
 After running the seeder, you can log in with these accounts:
 
-### Super Admin
-- **Email**: admin@biocode.com
+### Super Admin (Owner)
+- **Email**: superadmin@biocode.com
 - **Password**: admin123
+- **Department**: None (Owner of the system)
 
-### Supervisor
+### Supervisor (IT Department)
 - **Email**: supervisor@biocode.com
-- **Password**: supervisor123
+- **Password**: super123
+- **Department**: Information Technology
 
-### Tech
+### Tech (IT Department)
 - **Email**: tech1@biocode.com
 - **Password**: tech123
+- **Department**: Information Technology
 
-### Viewer
-- **Email**: viewer@biocode.com
-- **Password**: viewer123
+### Viewers (Department Staff)
+- **Email**: viewer1@biocode.com / **Password**: viewer123 / **Department**: Emergency Department
+- **Email**: viewer2@biocode.com / **Password**: viewer123 / **Department**: Intensive Care Unit
+- **Email**: viewer3@biocode.com / **Password**: viewer123 / **Department**: Radiology
+- **Email**: viewer4@biocode.com / **Password**: viewer123 / **Department**: Cardiology
 
 ## Project Structure
 
@@ -310,6 +330,15 @@ biocode/
 - `POST /departments/` - Create department
 - `DELETE /departments/{id}` - Delete department
 
+### Maintenance Endpoints
+- `GET /maintenance/` - List maintenance schedules (with filters)
+- `GET /maintenance/{id}` - Get maintenance schedule details
+- `POST /maintenance/` - Create maintenance schedule
+- `PATCH /maintenance/{id}` - Update maintenance schedule
+- `POST /maintenance/{id}/complete` - Mark maintenance as completed
+- `DELETE /maintenance/{id}` - Delete maintenance schedule
+- `GET /maintenance/stats/summary` - Get maintenance statistics
+
 ## Key Features by Role
 
 ### Super Admin Dashboard
@@ -327,14 +356,15 @@ biocode/
 
 ### Tech Dashboard
 - Personal performance metrics
-- Monthly performance report (last 12 months)
 - Assigned tickets only
 - Ticket status updates (except Close)
 
 ### Viewer Dashboard
 - Read-only access
 - Can create tickets
-- System-wide statistics
+- **Can only view their own tickets**
+- **Equipment section hidden**
+- System-wide ticket statistics
 - Cannot modify data
 
 ## Database Schema

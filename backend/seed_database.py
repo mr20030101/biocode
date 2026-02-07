@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import SessionLocal, engine
 from app.models import (
     Base, User, Department, Location, Equipment, Ticket, 
-    EquipmentLog, EquipmentHistory, TicketResponse,
+    EquipmentLog, EquipmentHistory, TicketResponse, MaintenanceSchedule,
     UserRole, EquipmentStatus, LogType, TicketStatus
 )
 from app.auth import hash_password
@@ -22,6 +22,7 @@ def clear_database(db: Session):
     print("🗑️  Clearing existing data...")
     
     # Delete in reverse order of dependencies
+    db.query(MaintenanceSchedule).delete()
     db.query(TicketResponse).delete()
     db.query(EquipmentHistory).delete()
     db.query(EquipmentLog).delete()
@@ -35,46 +36,82 @@ def clear_database(db: Session):
     print("✅ Database cleared")
 
 
-def seed_users(db: Session):
-    """Create users with different roles"""
+def seed_users(db: Session, departments):
+    """Create users with different roles and assign to departments"""
     print("\n👥 Seeding users...")
+    
+    # Get IT department for supervisor and techs
+    it_dept = next((d for d in departments if d.code == "IT"), None)
+    
+    # Get other departments for other users
+    ed_dept = next((d for d in departments if d.code == "ED"), None)
+    icu_dept = next((d for d in departments if d.code == "ICU"), None)
+    rad_dept = next((d for d in departments if d.code == "RAD"), None)
+    card_dept = next((d for d in departments if d.code == "CARD"), None)
     
     users_data = [
         {
             "email": "superadmin@biocode.com",
             "password": "admin123",
-            "full_name": "Super Admin",
-            "role": UserRole.super_admin
+            "full_name": "Super Admin (Owner)",
+            "role": UserRole.super_admin,
+            "department": None  # Super admin is the owner, not tied to a department
         },
         {
             "email": "supervisor@biocode.com",
             "password": "super123",
             "full_name": "John Supervisor",
-            "role": UserRole.supervisor
+            "role": UserRole.supervisor,
+            "department": it_dept  # IT Department
         },
         {
             "email": "tech1@biocode.com",
             "password": "tech123",
             "full_name": "Sarah Johnson",
-            "role": UserRole.tech
+            "role": UserRole.tech,
+            "department": it_dept  # IT Department
         },
         {
             "email": "tech2@biocode.com",
             "password": "tech123",
             "full_name": "Mike Davis",
-            "role": UserRole.tech
+            "role": UserRole.tech,
+            "department": it_dept  # IT Department
         },
         {
             "email": "tech3@biocode.com",
             "password": "tech123",
             "full_name": "Emily Chen",
-            "role": UserRole.tech
+            "role": UserRole.tech,
+            "department": it_dept  # IT Department
         },
         {
-            "email": "viewer@biocode.com",
+            "email": "viewer1@biocode.com",
             "password": "viewer123",
-            "full_name": "Viewer User",
-            "role": UserRole.viewer
+            "full_name": "Dr. Robert Smith",
+            "role": UserRole.viewer,
+            "department": ed_dept  # Emergency Department
+        },
+        {
+            "email": "viewer2@biocode.com",
+            "password": "viewer123",
+            "full_name": "Dr. Lisa Anderson",
+            "role": UserRole.viewer,
+            "department": icu_dept  # ICU
+        },
+        {
+            "email": "viewer3@biocode.com",
+            "password": "viewer123",
+            "full_name": "Dr. James Wilson",
+            "role": UserRole.viewer,
+            "department": rad_dept  # Radiology
+        },
+        {
+            "email": "viewer4@biocode.com",
+            "password": "viewer123",
+            "full_name": "Dr. Maria Garcia",
+            "role": UserRole.viewer,
+            "department": card_dept  # Cardiology
         },
     ]
     
@@ -85,13 +122,19 @@ def seed_users(db: Session):
             password_hash=hash_password(data["password"]),
             full_name=data["full_name"],
             role=data["role"],
-            is_active=True
+            is_active=True,
+            department_id=data["department"].id if data["department"] else None
         )
         db.add(user)
         users.append(user)
     
     db.commit()
     print(f"✅ Created {len(users)} users")
+    it_count = sum(1 for u in users if u.department_id == (it_dept.id if it_dept else None))
+    other_count = sum(1 for u in users if u.department_id and u.department_id != (it_dept.id if it_dept else None))
+    print(f"   - Super Admin (Owner): 1")
+    print(f"   - IT Department: {it_count}")
+    print(f"   - Other Departments: {other_count}")
     return users
 
 
@@ -100,6 +143,7 @@ def seed_departments(db: Session):
     print("\n🏥 Seeding departments...")
     
     departments_data = [
+        {"name": "Information Technology", "code": "IT", "description": "IT support and biomedical engineering"},
         {"name": "Emergency Department", "code": "ED", "description": "Emergency and trauma care"},
         {"name": "Intensive Care Unit", "code": "ICU", "description": "Critical care unit"},
         {"name": "Operating Room", "code": "OR", "description": "Surgical procedures"},
@@ -349,6 +393,104 @@ def seed_equipment_logs(db: Session, equipment_list, users):
     return logs
 
 
+def seed_maintenance_schedules(db: Session, equipment_list, users):
+    """Create maintenance schedules for equipment"""
+    print("\n🔧 Seeding maintenance schedules...")
+    
+    maintenance_types = [
+        {"type": "preventive", "frequency": 30, "weight": 0.4},  # Most common
+        {"type": "calibration", "frequency": 90, "weight": 0.3},
+        {"type": "inspection", "frequency": 180, "weight": 0.2},
+        {"type": "safety_check", "frequency": 365, "weight": 0.1},
+    ]
+    
+    schedules = []
+    techs = [u for u in users if u.role in [UserRole.tech, UserRole.supervisor]]
+    
+    # Only create schedules for active equipment with departments
+    active_equipment = [e for e in equipment_list if e.status == EquipmentStatus.active and e.department_id]
+    
+    # Create 1-2 schedules for 70% of active equipment
+    for equip in active_equipment:
+        if random.random() < 0.7:  # 70% chance
+            num_schedules = random.randint(1, 2)
+            
+            for _ in range(num_schedules):
+                # Weighted random selection of maintenance type
+                maint = random.choices(
+                    maintenance_types,
+                    weights=[m["weight"] for m in maintenance_types],
+                    k=1
+                )[0]
+                
+                # Random last maintenance date (0-60 days ago)
+                days_since_last = random.randint(0, 60)
+                last_maintenance = datetime.utcnow() - timedelta(days=days_since_last)
+                
+                # Calculate next maintenance date
+                next_maintenance = last_maintenance + timedelta(days=maint["frequency"])
+                
+                # Randomly assign to tech (80% chance)
+                assigned_tech = random.choice(techs) if random.random() < 0.8 else None
+                
+                # Generate notes based on maintenance type
+                notes_options = {
+                    "preventive": [
+                        "Check all connections and cables",
+                        "Clean filters and vents",
+                        "Inspect for wear and tear",
+                        "Test all functions and alarms",
+                    ],
+                    "calibration": [
+                        "Calibrate to manufacturer specifications",
+                        "Verify accuracy with test equipment",
+                        "Document calibration results",
+                        "Update calibration sticker",
+                    ],
+                    "inspection": [
+                        "Visual inspection of all components",
+                        "Check safety features",
+                        "Verify proper operation",
+                        "Document any issues found",
+                    ],
+                    "safety_check": [
+                        "Annual safety inspection required",
+                        "Check electrical safety",
+                        "Verify emergency stop functions",
+                        "Test backup power systems",
+                    ],
+                }
+                
+                notes = random.choice(notes_options[maint["type"]])
+                
+                schedule = MaintenanceSchedule(
+                    equipment_id=equip.id,
+                    maintenance_type=maint["type"],
+                    frequency_days=maint["frequency"],
+                    last_maintenance_date=last_maintenance if days_since_last > 0 else None,
+                    next_maintenance_date=next_maintenance,
+                    assigned_to_user_id=assigned_tech.id if assigned_tech else None,
+                    notes=notes,
+                    is_active=True
+                )
+                db.add(schedule)
+                schedules.append(schedule)
+    
+    db.commit()
+    print(f"✅ Created {len(schedules)} maintenance schedules")
+    
+    # Print some statistics
+    overdue = sum(1 for s in schedules if s.next_maintenance_date < datetime.utcnow())
+    upcoming_7 = sum(1 for s in schedules if datetime.utcnow() <= s.next_maintenance_date <= datetime.utcnow() + timedelta(days=7))
+    upcoming_30 = sum(1 for s in schedules if datetime.utcnow() <= s.next_maintenance_date <= datetime.utcnow() + timedelta(days=30))
+    
+    print(f"   📊 Overdue: {overdue}")
+    print(f"   📊 Due in 7 days: {upcoming_7}")
+    print(f"   📊 Due in 30 days: {upcoming_30}")
+    
+    return schedules
+
+
 def main():
     """Main seeder function"""
     print("🌱 Starting database seeding...\n")
@@ -360,13 +502,14 @@ def main():
         # Clear existing data
         clear_database(db)
         
-        # Seed data in order
-        users = seed_users(db)
+        # Seed data in order - departments first, then users
         departments = seed_departments(db)
+        users = seed_users(db, departments)
         locations = seed_locations(db)
         equipment_list = seed_equipment(db, departments, locations)
         tickets = seed_tickets(db, equipment_list, users)
         logs = seed_equipment_logs(db, equipment_list, users)
+        schedules = seed_maintenance_schedules(db, equipment_list, users)
         
         print("\n" + "="*50)
         print("✨ Database seeding completed successfully!")
@@ -378,12 +521,14 @@ def main():
         print(f"   Equipment: {len(equipment_list)}")
         print(f"   Tickets: {len(tickets)}")
         print(f"   Equipment Logs: {len(logs)}")
+        print(f"   Maintenance Schedules: {len(schedules)}")
         
         print("\n🔑 Test Credentials:")
-        print("   Super Admin: superadmin@biocode.com / admin123")
-        print("   Supervisor:  supervisor@biocode.com / super123")
-        print("   Tech:        tech1@biocode.com / tech123")
-        print("   Viewer:      viewer@biocode.com / viewer123")
+        print("   Super Admin (Owner): superadmin@biocode.com / admin123")
+        print("   Supervisor (IT):     supervisor@biocode.com / super123")
+        print("   Tech (IT):           tech1@biocode.com / tech123")
+        print("   Viewer (ED):         viewer1@biocode.com / viewer123")
+        print("   Viewer (ICU):        viewer2@biocode.com / viewer123")
         
     except Exception as e:
         print(f"\n❌ Error during seeding: {e}")

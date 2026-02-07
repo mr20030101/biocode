@@ -25,27 +25,33 @@ export function Navigation() {
 
           {/* Navigation Links */}
           <div className="hidden md:flex items-center space-x-1">
-            <Link
-              to="/"
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive("/")
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              Dashboard
-            </Link>
+            {/* Hide Dashboard link for viewers */}
+            {!auth.isViewer() && (
+              <Link
+                to="/"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive("/")
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                Dashboard
+              </Link>
+            )}
              
-            <Link
-              to="/equipment"
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive("/equipment") || location.pathname.startsWith("/equipment")
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              }`}
-            >
-              Equipment
-            </Link> 
+            {/* Hide Equipment for tech and viewer users */}
+            {!auth.isTech() && !auth.isViewer() && (
+              <Link
+                to="/equipment"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive("/equipment") || location.pathname.startsWith("/equipment")
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                Equipment
+              </Link>
+            )}
             
             <Link
               to="/tickets"
@@ -58,8 +64,22 @@ export function Navigation() {
               Tickets
             </Link>
             
-            {/* Hide Departments for tech users */}
-            {!auth.isTech() && (
+            {/* Hide Maintenance for viewer users */}
+            {!auth.isViewer() && (
+              <Link
+                to="/maintenance"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive("/maintenance")
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                Maintenance
+              </Link>
+            )}
+            
+            {/* Hide Departments for tech and viewer users */}
+            {!auth.isTech() && !auth.isViewer() && (
               <Link
                 to="/departments"
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${

@@ -5,6 +5,7 @@ from .routers_auth import router as auth_router
 from .routers_equipment import router as equipment_router
 from .routers_departments import router as departments_router
 from .routers_tickets import router as tickets_router
+from .routers_maintenance import router as maintenance_router
 
 
 app = FastAPI(title="Biocode Biomedical Equipment API")
@@ -27,6 +28,7 @@ app.include_router(auth_router)
 app.include_router(equipment_router)
 app.include_router(departments_router)
 app.include_router(tickets_router)
+app.include_router(maintenance_router)
 
 
 @app.get("/health")

@@ -12,6 +12,8 @@ import { TicketDetailPage } from "./pages/TicketDetailPage";
 import { DepartmentsPage } from "./pages/DepartmentsPage";
 import { UsersPage } from "./pages/UsersPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
+import { ViewerLandingPage } from "./pages/ViewerLandingPage";
+import { MaintenancePage } from "./pages/MaintenancePage";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const auth = useAuth();
@@ -37,7 +39,7 @@ export default function App() {
         path="/"
         element={
           <RequireAuth>
-            <DashboardPage />
+            {auth.user?.role === "viewer" ? <ViewerLandingPage /> : <DashboardPage />}
           </RequireAuth>
         }
       />
@@ -45,7 +47,7 @@ export default function App() {
         path="/equipment"
         element={
           <RequireAuth>
-            <EquipmentPage />
+            {auth.user?.role === "viewer" ? <Navigate to="/" replace /> : <EquipmentPage />}
           </RequireAuth>
         }
       />
@@ -53,7 +55,7 @@ export default function App() {
         path="/equipment/new"
         element={
           <RequireAuth>
-            <NewEquipmentPage />
+            {auth.user?.role === "viewer" ? <Navigate to="/" replace /> : <NewEquipmentPage />}
           </RequireAuth>
         }
       />
@@ -77,7 +79,7 @@ export default function App() {
         path="/departments"
         element={
           <RequireAuth>
-            <DepartmentsPage />
+            {auth.user?.role === "viewer" ? <Navigate to="/" replace /> : <DepartmentsPage />}
           </RequireAuth>
         }
       />
@@ -94,6 +96,14 @@ export default function App() {
         element={
           <RequireAuth>
             <UserProfilePage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/maintenance"
+        element={
+          <RequireAuth>
+            {auth.user?.role === "viewer" ? <Navigate to="/" replace /> : <MaintenancePage />}
           </RequireAuth>
         }
       />

@@ -10,12 +10,20 @@ type User = {
   full_name: string;
   role: string;
   is_active: boolean;
+  department_id?: string | null;
+};
+
+type Department = {
+  id: string;
+  name: string;
+  code?: string | null;
 };
 
 export function UsersPage() {
   const auth = useAuth();
   const nav = useNavigate();
   const [users, setUsers] = useState<User[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -25,6 +33,7 @@ export function UsersPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editFullName, setEditFullName] = useState("");
   const [editRole, setEditRole] = useState("");
+  const [editDepartmentId, setEditDepartmentId] = useState("");
   const [updating, setUpdating] = useState(false);
   
   // Deactivate modal state
@@ -37,6 +46,7 @@ export function UsersPage() {
   const [newFullName, setNewFullName] = useState("");
   const [newRole, setNewRole] = useState("tech");
   const [newPassword, setNewPassword] = useState("");
+  const [newDepartmentId, setNewDepartmentId] = useState("");
   
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -49,8 +59,12 @@ export function UsersPage() {
   const loadUsers = async () => {
     try {
       setLoading(true);
-      const data = await apiFetch<User[]>("/auth/users");
-      setUsers(data);
+      const [usersData, departmentsData] = await Promise.all([
+        apiFetch<User[]>("/auth/users"),
+        apiFetch<Department[]>("/departments/"),
+      ]);
+      setUsers(usersData);
+      setDepartments(departmentsData);
       setError(null);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load users");
@@ -64,6 +78,7 @@ export function UsersPage() {
     setEditEmail(user.email);
     setEditFullName(user.full_name);
     setEditRole(user.role);
+    setEditDepartmentId(user.department_id || "");
     setShowEditModal(true);
   };
 
@@ -81,6 +96,7 @@ export function UsersPage() {
           email: editEmail,
           full_name: editFullName,
           role: editRole,
+          department_id: editDepartmentId || null,
         }),
       });
       setShowEditModal(false);
@@ -138,6 +154,7 @@ export function UsersPage() {
           full_name: newFullName,
           role: newRole,
           password: newPassword,
+          department_id: newDepartmentId || null,
         }),
       });
       setShowAddModal(false);
@@ -145,6 +162,7 @@ export function UsersPage() {
       setNewFullName("");
       setNewRole("tech");
       setNewPassword("");
+      setNewDepartmentId("");
       await loadUsers();
     } catch (e: any) {
       setError(e?.message ?? "Failed to create user");
@@ -196,6 +214,12 @@ export function UsersPage() {
     return isActive
       ? "bg-green-100 text-green-700"
       : "bg-red-100 text-red-700";
+  };
+
+  const getDepartmentName = (departmentId?: string | null) => {
+    if (!departmentId) return "No Department";
+    const dept = departments.find(d => d.id === departmentId);
+    return dept ? dept.name : "Unknown";
   };
 
   // Redirect if not super_admin
@@ -304,6 +328,9 @@ export function UsersPage() {
                       Email
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Department
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Role
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -335,6 +362,11 @@ export function UsersPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {user.email}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-gray-700">
+                          {getDepartmentName(user.department_id)}
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
@@ -470,6 +502,24 @@ export function UsersPage() {
                     <option value="viewer">Viewer</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={newDepartmentId}
+                    onChange={(e) => setNewDepartmentId(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">No Department</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name} {dept.code && `(${dept.code})`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {error && (
@@ -549,6 +599,24 @@ export function UsersPage() {
                     <option value="supervisor">Supervisor</option>
                     <option value="tech">Tech</option>
                     <option value="viewer">Viewer</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={editDepartmentId}
+                    onChange={(e) => setEditDepartmentId(e.target.value)}
+                    className="input-field"
+                  >
+                    <option value="">No Department</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name} {dept.code && `(${dept.code})`}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

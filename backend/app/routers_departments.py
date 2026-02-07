@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from .auth import get_db, get_current_user
 from .models import Department, User
 from .schemas import DepartmentCreate, DepartmentOut
+from .permissions import can_view_departments
 
 
 router = APIRouter(prefix="/departments", tags=["departments"])
@@ -16,6 +17,8 @@ def list_departments(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # All authenticated users can list departments (needed for equipment info in tickets)
+    # But viewers cannot access the departments page in the UI
     return db.query(Department).all()
 
 

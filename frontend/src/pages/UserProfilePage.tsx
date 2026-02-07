@@ -20,12 +20,6 @@ type UserStats = {
     open: number;
     completion_rate: number;
   };
-  monthly_stats: Array<{
-    month: string;
-    year: number;
-    resolved: number;
-    assigned: number;
-  }>;
 };
 
 export function UserProfilePage() {
@@ -332,96 +326,6 @@ export function UserProfilePage() {
                 </svg>
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* Monthly Report */}
-        <div className="card">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Monthly Performance Report</h2>
-          <p className="text-sm text-gray-600 mb-6">Last 12 months of ticket activity</p>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Month
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Assigned
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fixed
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Rate
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {stats.monthly_stats.map((month, index) => {
-                  const rate =
-                    month.assigned > 0
-                      ? Math.round((month.resolved / month.assigned) * 100)
-                      : 0;
-                  return (
-                    <tr key={index} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">
-                          {month.month} {month.year}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 text-sm font-medium text-blue-700 bg-blue-100 rounded-full">
-                          {month.assigned}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-3 py-1 text-sm font-medium text-green-700 bg-green-100 rounded-full">
-                          {month.resolved}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div className="w-16 bg-gray-200 rounded-full h-2 mr-2">
-                            <div
-                              className={`h-2 rounded-full ${
-                                rate >= 80
-                                  ? "bg-green-500"
-                                  : rate >= 50
-                                  ? "bg-orange-500"
-                                  : "bg-red-500"
-                              }`}
-                              style={{ width: `${rate}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm font-medium text-gray-700">{rate}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-
-            {!stats.monthly_stats.length && (
-              <div className="text-center py-12">
-                <svg
-                  className="mx-auto h-12 w-12 text-gray-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
-                  />
-                </svg>
-                <p className="mt-2 text-sm text-gray-500">No monthly data available.</p>
-              </div>
-            )}
           </div>
         </div>
       </div>

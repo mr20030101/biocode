@@ -15,6 +15,7 @@ class UserBase(BaseModel):
     email: EmailStr
     full_name: str
     role: UserRole = UserRole.tech
+    department_id: Optional[str] = None
 
 
 class UserCreate(UserBase):
@@ -26,6 +27,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
     is_active: Optional[bool] = None
+    department_id: Optional[str] = None
 
 
 class UserOut(UserBase):
@@ -131,6 +133,40 @@ class EquipmentLogCreate(EquipmentLogBase):
 class EquipmentLogOut(EquipmentLogBase):
     id: str
     created_by_user_id: Optional[str] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MaintenanceScheduleBase(BaseModel):
+    equipment_id: str
+    maintenance_type: str
+    frequency_days: int
+    last_maintenance_date: Optional[datetime] = None
+    next_maintenance_date: datetime
+    assigned_to_user_id: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: bool = True
+
+
+class MaintenanceScheduleCreate(MaintenanceScheduleBase):
+    pass
+
+
+class MaintenanceScheduleUpdate(BaseModel):
+    maintenance_type: Optional[str] = None
+    frequency_days: Optional[int] = None
+    last_maintenance_date: Optional[datetime] = None
+    next_maintenance_date: Optional[datetime] = None
+    assigned_to_user_id: Optional[str] = None
+    notes: Optional[str] = None
+    is_active: Optional[bool] = None
+
+
+class MaintenanceScheduleOut(MaintenanceScheduleBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
 
     class Config:
         from_attributes = True

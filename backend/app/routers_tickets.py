@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from .auth import get_db, get_current_user
-from .models import Ticket, Equipment, User, TicketStatus
+from .models import Ticket, Equipment, User, TicketStatus, UserRole
 from .schemas import TicketCreate, TicketOut, TicketUpdate
 from .permissions import (
     can_view_all_tickets,
@@ -22,15 +22,20 @@ def list_tickets(
     status: Optional[str] = None,
     priority: Optional[str] = None,
     assigned_to_user_id: Optional[str] = None,
+    department_id: Optional[str] = None,
     search: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Ticket)
     
-    # Role-based filtering: techs only see assigned tickets
-    if not can_view_all_tickets(current_user):
+    # Role-based filtering:
+    # - Techs only see assigned tickets
+    # - Viewers only see tickets they created
+    if current_user.role == UserRole.tech:
         query = query.filter(Ticket.assigned_to_user_id == current_user.id)
+    elif current_user.role == UserRole.viewer:
+        query = query.filter(Ticket.reported_by_user_id == current_user.id)
     
     # Filter by status
     if status:
@@ -43,6 +48,10 @@ def list_tickets(
     # Filter by assigned user
     if assigned_to_user_id:
         query = query.filter(Ticket.assigned_to_user_id == assigned_to_user_id)
+    
+    # Filter by department
+    if department_id:
+        query = query.filter(Ticket.department_id == department_id)
     
     # Search by title, ticket code, or description
     if search:

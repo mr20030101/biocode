@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const canUpdateEquipmentStatus = () => isSupervisorOrAbove();
   const canCreateEquipment = () => isSupervisorOrAbove();
   const canManageDepartments = () => isSuperAdmin();
-  const canViewAllTickets = () => user?.role !== "tech";
+  const canViewAllTickets = () => isSupervisorOrAbove();
 
   const value = useMemo(
     () => ({ 

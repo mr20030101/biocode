@@ -436,20 +436,23 @@ export function DashboardPage() {
           <>
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              <div className="stat-card">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">Total Equipment</p>
-                    <p className="text-3xl font-bold text-gray-900 mt-2">{equipment.length}</p>
-                    <p className="text-sm text-gray-500 mt-1">{activeEquipment} active</p>
-                  </div>
-                  <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                    <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                    </svg>
+              {/* Hide Total Equipment for viewers */}
+              {!auth.isViewer() && (
+                <div className="stat-card">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Equipment</p>
+                      <p className="text-3xl font-bold text-gray-900 mt-2">{equipment.length}</p>
+                      <p className="text-sm text-gray-500 mt-1">{activeEquipment} active</p>
+                    </div>
+                    <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                      </svg>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               <div className="stat-card">
                 <div className="flex items-center justify-between">
@@ -498,36 +501,38 @@ export function DashboardPage() {
             </div>
 
             {/* Content Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Recent Equipment */}
-              <div className="card">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Recent Equipment</h2>
-                  <Link to="/equipment" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                    View all →
-                  </Link>
-                </div>
-                <div className="space-y-3">
-                  {equipment.slice(0, 5).map((e) => (
-                    <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
-                      <div className="flex-1">
-                        <p className="font-medium text-gray-900">{e.device_name}</p>
-                        <p className="text-sm text-gray-500">Asset: {e.asset_tag}</p>
+            <div className={`grid grid-cols-1 ${!auth.isViewer() ? 'lg:grid-cols-2' : ''} gap-6`}>
+              {/* Recent Equipment - Hide for viewers */}
+              {!auth.isViewer() && (
+                <div className="card">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-semibold text-gray-900">Recent Equipment</h2>
+                    <Link to="/equipment" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                      View all →
+                    </Link>
+                  </div>
+                  <div className="space-y-3">
+                    {equipment.slice(0, 5).map((e) => (
+                      <div key={e.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900">{e.device_name}</p>
+                          <p className="text-sm text-gray-500">Asset: {e.asset_tag}</p>
+                        </div>
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          e.status === 'active' 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {e.status}
+                        </span>
                       </div>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
-                        e.status === 'active' 
-                          ? 'bg-green-100 text-green-700' 
-                          : 'bg-gray-100 text-gray-700'
-                      }`}>
-                        {e.status}
-                      </span>
-                    </div>
-                  ))}
-                  {!equipment.length && (
-                    <p className="text-sm text-gray-500 text-center py-8">No equipment yet.</p>
-                  )}
+                    ))}
+                    {!equipment.length && (
+                      <p className="text-sm text-gray-500 text-center py-8">No equipment yet.</p>
+                    )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Recent Tickets */}
               <div className="card">

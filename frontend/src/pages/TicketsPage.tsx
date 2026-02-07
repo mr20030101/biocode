@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navigation } from "../components/Navigation";
 import { apiFetch } from "../lib/api";
 
@@ -21,6 +21,7 @@ type Equipment = {
 
 export function TicketsPage() {
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,6 +74,11 @@ export function TicketsPage() {
   useEffect(() => {
     loadTickets();
     loadEquipment();
+    
+    // Check if URL has ?create=true parameter
+    if (searchParams.get("create") === "true") {
+      setShowForm(true);
+    }
   }, []);
 
   useEffect(() => {

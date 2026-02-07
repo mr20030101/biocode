@@ -8,7 +8,8 @@ from .models import Equipment, User, EquipmentStatus
 from .schemas import EquipmentCreate, EquipmentOut, EquipmentUpdateStatus
 from .permissions import (
     can_update_equipment_status,
-    can_create_equipment
+    can_create_equipment,
+    can_view_equipment
 )
 
 
@@ -23,6 +24,8 @@ def list_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # All authenticated users can list equipment (needed for ticket creation)
+    # But viewers cannot access the equipment page in the UI
     query = db.query(Equipment)
     
     # Filter by status
@@ -51,6 +54,7 @@ def get_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    # All authenticated users can get equipment details (needed for ticket details)
     equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
