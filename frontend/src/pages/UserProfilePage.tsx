@@ -11,6 +11,7 @@ type UserStats = {
     email: string;
     role: string;
     is_active: boolean;
+    department_id?: string | null;
   };
   summary: {
     total_assigned: number;
@@ -22,6 +23,37 @@ type UserStats = {
   };
 };
 
+type Department = {
+  id: string;
+  name: string;
+  code?: string | null;
+};
+
+type Ticket = {
+  id: string;
+  ticket_code: string;
+  title?: string | null;
+  status: string;
+  priority?: string | null;
+  created_at: string;
+  equipment_id?: string | null;
+};
+
+type MaintenanceSchedule = {
+  id: string;
+  equipment_id: string;
+  maintenance_type: string;
+  next_maintenance_date: string;
+  is_active: boolean;
+  notes?: string | null;
+};
+
+type Equipment = {
+  id: string;
+  device_name: string;
+  asset_tag: string;
+};
+
 export function UserProfilePage() {
   const { id } = useParams<{ id: string }>();
   const nav = useNavigate();
@@ -29,6 +61,11 @@ export function UserProfilePage() {
   const [stats, setStats] = useState<UserStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [department, setDepartment] = useState<Department | null>(null);
+  const [assignedTickets, setAssignedTickets] = useState<Ticket[]>([]);
+  const [createdTickets, setCreatedTickets] = useState<Ticket[]>([]);
+  const [maintenanceSchedules, setMaintenanceSchedules] = useState<MaintenanceSchedule[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
 
   useEffect(() => {
     loadUserStats();
@@ -39,6 +76,58 @@ export function UserProfilePage() {
       setLoading(true);
       const data = await apiFetch<UserStats>(`/auth/users/${id}/stats`);
       setStats(data);
+      
+      // Load department if user has one
+      if (data.user.department_id) {
+        try {
+          const deptData = await apiFetch<Department>(`/departments/${data.user.department_id}`);
+          setDepartment(deptData);
+        } catch (e) {
+          console.error("Failed to load department:", e);
+        }
+      }
+      
+      // Only load tickets for non-tech users or if super_admin is viewing
+      const isTechUser = data.user.role === 'tech';
+      const isViewingOwnProfile = auth.user?.id === id;
+      
+      if (!isTechUser || !isViewingOwnProfile) {
+        // Load tickets assigned to this user
+        try {
+          const assignedResponse = await apiFetch<any>(`/tickets/?assigned_to_user_id=${id}&page_size=100`);
+          setAssignedTickets(assignedResponse.items || assignedResponse);
+        } catch (e) {
+          console.error("Failed to load assigned tickets:", e);
+        }
+        
+        // Load tickets created by this user
+        try {
+          const createdResponse = await apiFetch<any>(`/tickets/?page_size=1000`);
+          const allTickets = createdResponse.items || createdResponse;
+          // Filter tickets created by this user
+          setCreatedTickets(allTickets.filter((t: any) => t.reported_by_user_id === id));
+        } catch (e) {
+          console.error("Failed to load created tickets:", e);
+        }
+      }
+      
+      // Load maintenance schedules assigned to this user
+      try {
+        const maintenanceResponse = await apiFetch<any>(`/maintenance/?page_size=1000`);
+        const allMaintenance = maintenanceResponse.items || maintenanceResponse;
+        setMaintenanceSchedules(allMaintenance.filter((m: any) => m.assigned_to_user_id === id && m.is_active));
+      } catch (e) {
+        console.error("Failed to load maintenance schedules:", e);
+      }
+      
+      // Load equipment for reference
+      try {
+        const equipmentResponse = await apiFetch<any>(`/equipment/?page_size=1000`);
+        setEquipment(equipmentResponse.items || equipmentResponse);
+      } catch (e) {
+        console.error("Failed to load equipment:", e);
+      }
+      
       setError(null);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load user statistics");
@@ -62,8 +151,10 @@ export function UserProfilePage() {
     }
   };
 
-  // Redirect if not super_admin
-  if (!auth.isSuperAdmin()) {
+  // Check access: super_admin can view any profile, tech users can view their own
+  const canViewProfile = auth.isSuperAdmin() || (auth.user?.id === id && auth.user?.role === 'tech');
+  
+  if (!canViewProfile) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation />
@@ -85,7 +176,7 @@ export function UserProfilePage() {
               </svg>
               <h3 className="mt-4 text-lg font-medium text-gray-900">Access Denied</h3>
               <p className="mt-2 text-sm text-gray-500">
-                Only super administrators can access user profiles.
+                You can only view your own profile.
               </p>
             </div>
           </div>
@@ -128,15 +219,27 @@ export function UserProfilePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => nav("/users")}
-            className="flex items-center text-gray-600 hover:text-gray-900"
-          >
-            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Users
-          </button>
+          {auth.isSuperAdmin() ? (
+            <button
+              onClick={() => nav("/users")}
+              className="flex items-center text-gray-600 hover:text-gray-900"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Users
+            </button>
+          ) : (
+            <button
+              onClick={() => nav("/")}
+              className="flex items-center text-gray-600 hover:text-gray-900"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+              Back to Dashboard
+            </button>
+          )}
         </div>
 
         {/* User Info Card */}
@@ -167,6 +270,11 @@ export function UserProfilePage() {
                 >
                   {stats.user.is_active ? "Active" : "Inactive"}
                 </span>
+                {department && (
+                  <span className="px-3 py-1 text-xs font-medium rounded-full bg-indigo-100 text-indigo-700">
+                    {department.name}
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -328,6 +436,182 @@ export function UserProfilePage() {
             </div>
           </div>
         </div>
+
+        {/* Assigned Tickets Section */}
+        {assignedTickets.length > 0 && (
+          <div className="card mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Assigned Tickets ({assignedTickets.length})
+            </h2>
+            <div className="space-y-3">
+              {assignedTickets.slice(0, 10).map((ticket) => {
+                const eq = equipment.find(e => e.id === ticket.equipment_id);
+                return (
+                  <div key={ticket.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-gray-900">{ticket.ticket_code}</span>
+                        {ticket.priority && (
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            ticket.priority === 'high' ? 'bg-red-100 text-red-700' :
+                            ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {ticket.priority}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{ticket.title || 'No title'}</p>
+                      {eq && (
+                        <p className="text-xs text-gray-500 mt-1">Equipment: {eq.device_name} ({eq.asset_tag})</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Created: {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ml-4 ${
+                      ticket.status === 'open' ? 'bg-blue-100 text-blue-700' :
+                      ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
+                      ticket.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {ticket.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                );
+              })}
+              {assignedTickets.length > 10 && (
+                <p className="text-sm text-gray-500 text-center pt-2">
+                  Showing 10 of {assignedTickets.length} assigned tickets
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Created Tickets Section */}
+        {createdTickets.length > 0 && (
+          <div className="card mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+              </svg>
+              Created Tickets ({createdTickets.length})
+            </h2>
+            <div className="space-y-3">
+              {createdTickets.slice(0, 10).map((ticket) => {
+                const eq = equipment.find(e => e.id === ticket.equipment_id);
+                return (
+                  <div key={ticket.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium text-gray-900">{ticket.ticket_code}</span>
+                        {ticket.priority && (
+                          <span className={`px-2 py-1 text-xs font-medium rounded ${
+                            ticket.priority === 'high' ? 'bg-red-100 text-red-700' :
+                            ticket.priority === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>
+                            {ticket.priority}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600 mt-1">{ticket.title || 'No title'}</p>
+                      {eq && (
+                        <p className="text-xs text-gray-500 mt-1">Equipment: {eq.device_name} ({eq.asset_tag})</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Created: {new Date(ticket.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ml-4 ${
+                      ticket.status === 'open' ? 'bg-blue-100 text-blue-700' :
+                      ticket.status === 'in_progress' ? 'bg-yellow-100 text-yellow-700' :
+                      ticket.status === 'resolved' ? 'bg-green-100 text-green-700' :
+                      'bg-gray-100 text-gray-700'
+                    }`}>
+                      {ticket.status.replace('_', ' ')}
+                    </span>
+                  </div>
+                );
+              })}
+              {createdTickets.length > 10 && (
+                <p className="text-sm text-gray-500 text-center pt-2">
+                  Showing 10 of {createdTickets.length} created tickets
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Maintenance Schedules Section */}
+        {maintenanceSchedules.length > 0 && (
+          <div className="card mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
+              <svg className="w-6 h-6 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Assigned Maintenance Schedules ({maintenanceSchedules.length})
+            </h2>
+            <div className="space-y-3">
+              {maintenanceSchedules.map((schedule) => {
+                const eq = equipment.find(e => e.id === schedule.equipment_id);
+                const nextDate = new Date(schedule.next_maintenance_date);
+                const now = new Date();
+                const isOverdue = nextDate < now;
+                const daysUntil = Math.ceil((nextDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                
+                return (
+                  <div key={schedule.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                    <div className="flex-1">
+                      <p className="font-medium text-gray-900">
+                        {eq?.device_name || 'Unknown Equipment'}
+                      </p>
+                      {eq && (
+                        <p className="text-xs text-gray-500 mt-1">Asset Tag: {eq.asset_tag}</p>
+                      )}
+                      <p className="text-sm text-gray-600 mt-1 capitalize">
+                        {schedule.maintenance_type.replace('_', ' ')}
+                      </p>
+                      {schedule.notes && (
+                        <p className="text-xs text-gray-500 mt-1">{schedule.notes}</p>
+                      )}
+                      <p className="text-xs text-gray-400 mt-1">
+                        Next: {nextDate.toLocaleDateString()}
+                      </p>
+                    </div>
+                    <span className={`px-3 py-1 text-xs font-medium rounded-full ml-4 ${
+                      isOverdue ? 'bg-red-100 text-red-700' :
+                      daysUntil <= 7 ? 'bg-orange-100 text-orange-700' :
+                      'bg-green-100 text-green-700'
+                    }`}>
+                      {isOverdue ? `Overdue ${Math.abs(daysUntil)}d` :
+                       daysUntil === 0 ? 'Due today' :
+                       daysUntil === 1 ? 'Due tomorrow' :
+                       `${daysUntil} days`}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* No Activity Message */}
+        {assignedTickets.length === 0 && createdTickets.length === 0 && maintenanceSchedules.length === 0 && (
+          <div className="card">
+            <div className="text-center py-12">
+              <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              <p className="mt-2 text-sm text-gray-500">No tickets or maintenance schedules assigned to this user</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

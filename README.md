@@ -29,9 +29,34 @@ A comprehensive web application for managing biomedical equipment, service ticke
 - **Create preventive maintenance schedules**
 - **Track calibration and inspection schedules**
 - **View overdue and upcoming maintenance**
-- **Assign maintenance to technicians**
+- **Assign maintenance to support staff**
 - **Automatic next maintenance date calculation**
 - **Maintenance statistics dashboard**
+- **Department-based filtering**
+
+### Notifications System
+- **Real-time notification bell with unread count**
+- **Automatic notifications for**:
+  - Ticket created, assigned, or status changed
+  - Equipment status changes
+  - Maintenance completed
+  - Overdue maintenance alerts
+- **Role-based notifications**:
+  - Managers notified of all major events
+  - Support staff notified of assignments
+  - Department staff notified of their tickets
+- **Notification management**:
+  - Mark as read/unread
+  - Delete notifications
+  - Filter by read status
+  - Pagination support
+
+### Reports Generation
+- **Excel report downloads**
+- **Equipment inventory reports** (with filters)
+- **Tickets reports** (with date ranges and filters)
+- **Maintenance schedules reports**
+- **Available to Managers and Super Admins only**
 
 ### Ticket Management
 - Create and manage service tickets
@@ -47,16 +72,22 @@ A comprehensive web application for managing biomedical equipment, service ticke
 - Department codes for organization
 
 ### User Management
-- Role-based access control (Super Admin, Supervisor, Tech, Viewer)
+- Role-based access control (Super Admin, Manager, Department Head, Support, Department Incharge)
 - User creation and management
 - Activate/Deactivate users
-- Performance tracking for technicians
+- Performance tracking for support staff
 - Department assignments
+- Support type classification (Biomed Tech, Maintenance, IT, House Keeping)
 
 ### Dashboard
-- Role-specific dashboards
-- Tech users see personal performance metrics
-- Other users see system-wide statistics
+- **Role-specific dashboards with Chart.js visualizations**
+- **Support users see personal performance metrics**
+- **Managers and Department Heads see system-wide statistics**
+- **Interactive charts**:
+  - Line charts for performance trends
+  - Pie charts for status distribution
+  - Bar charts for equipment repairs by department
+- **Department Incharge users see special landing page**
 - Recent equipment and tickets overview
 
 ## Technology Stack
@@ -124,7 +155,25 @@ VITE_API_URL=http://127.0.0.1:8000
 
 ## Database Setup
 
-### 1. Create MySQL Database
+> **📖 For detailed database documentation, see [DATABASE_SETUP.md](backend/DATABASE_SETUP.md)**
+
+### Quick Setup (Recommended)
+
+The fastest way to set up the database is using the reset script:
+
+```bash
+cd backend
+python reset_database.py
+```
+
+This will:
+1. Drop all existing tables
+2. Run migrations to create schema
+3. Seed the database with sample data
+
+### Manual Setup
+
+#### 1. Create MySQL Database
 ```bash
 mysql -u root -p
 ```
@@ -134,39 +183,37 @@ CREATE DATABASE biocode CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 EXIT;
 ```
 
-### 2. Run Migrations
+#### 2. Run Migrations
 ```bash
 cd backend
-alembic upgrade head
+python -m alembic upgrade head
 ```
 
-This will create all necessary tables:
-- users
-- departments
-- locations
-- equipment
-- tickets
-- equipment_logs
-- equipment_history
+This creates all tables from the consolidated migration file:
+- users, departments, locations
+- equipment, tickets, equipment_logs
+- equipment_history, ticket_responses
+- maintenance_schedules, notifications
 
-### 3. Seed Database (Optional)
+#### 3. Seed Database
 ```bash
 cd backend
 python seed_database.py
 ```
 
 This creates:
-- 9 users:
+- 11 users:
   - 1 Super Admin (Owner - no department)
-  - 1 Supervisor (IT Department)
-  - 3 Techs (IT Department)
-  - 4 Viewers (assigned to ED, ICU, Radiology, Cardiology)
+  - 1 Manager (IT Department)
+  - 5 Support Staff (IT Department with different specializations)
+  - 4 Department Incharge (assigned to ED, ICU, Radiology, Cardiology)
 - 9 departments (including IT Department)
 - 10 locations
 - 22 equipment items
 - 15 tickets
-- Equipment logs and history
-- 21 maintenance schedules (with overdue, upcoming, and future schedules)
+- 29 equipment logs
+- 22 maintenance schedules
+- 47 notifications
 
 ## Running the Application
 
@@ -196,31 +243,54 @@ Open your browser and navigate to: `http://localhost:5173`
 ### Super Admin
 - **Full system access**
 - Create/edit/delete users, equipment, departments
-- View all tickets and assign to technicians
-- Access user management and performance reports
+- View all tickets and assign to support staff
+- Access user management and reports
 - Close tickets
 
-### Supervisor
+### Manager
+- **Handles multiple departments**
 - Create/edit equipment and departments
-- View all tickets and assign to technicians
+- View all tickets and assign to support staff
 - Update equipment status
 - Close tickets
+- Generate reports
 - Cannot manage users
 
-### Tech
+### Department Head
+- **Manages single department**
+- Create/edit equipment in their department
+- View department tickets
+- Update equipment status
+- Assign tickets within department
+- Cannot close tickets or manage users
+
+### Support
+- **Technical staff with specializations**
 - View only assigned tickets
 - Update ticket status (Open, In Progress, Resolved)
 - Cannot close tickets
-- Cannot access equipment or departments
+- Cannot access equipment or departments pages
 - Personal performance dashboard
+- **Support Types**:
+  - **Biomed Tech** - Biomedical equipment specialists
+  - **Maintenance/Facility**:
+    - Aircon Tech - Air conditioning and HVAC
+    - Plumber - Plumbing systems
+    - Carpenter - Carpentry work
+    - Painter - Painting and finishing
+    - Electrician - Electrical systems
+  - **IT Staff** - Information technology support
+  - **House Keeping** - Facility cleaning and maintenance
+  - **Other** - General support staff
 
-### Viewer
-- Read-only access
+### Department Incharge (Secretary)
+- **Department administrative staff**
 - Can create tickets (can select equipment from dropdown)
 - **Can only view tickets they created**
 - **Cannot access Equipment or Departments pages**
 - Cannot update ticket status to Resolved or Closed
 - Cannot create departments or equipment
+- Special landing page with action buttons
 
 ## Default Credentials
 
@@ -230,22 +300,26 @@ After running the seeder, you can log in with these accounts:
 - **Email**: superadmin@biocode.com
 - **Password**: admin123
 - **Department**: None (Owner of the system)
+- **Role**: super_admin
 
-### Supervisor (IT Department)
-- **Email**: supervisor@biocode.com
-- **Password**: super123
+### Manager (IT Department)
+- **Email**: manager@biocode.com
+- **Password**: manager123
 - **Department**: Information Technology
+- **Role**: manager
 
-### Tech (IT Department)
-- **Email**: tech1@biocode.com
-- **Password**: tech123
-- **Department**: Information Technology
+### Support Staff (IT Department)
+- **Email**: support1@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Biomed Tech
+- **Email**: support2@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Electrician (Maintenance)
+- **Email**: support3@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Aircon Tech (Maintenance)
+- **Email**: support4@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Plumber (Maintenance)
+- **Email**: support5@biocode.com / **Password**: support123 / **Department**: IT / **Type**: IT Staff
 
-### Viewers (Department Staff)
-- **Email**: viewer1@biocode.com / **Password**: viewer123 / **Department**: Emergency Department
-- **Email**: viewer2@biocode.com / **Password**: viewer123 / **Department**: Intensive Care Unit
-- **Email**: viewer3@biocode.com / **Password**: viewer123 / **Department**: Radiology
-- **Email**: viewer4@biocode.com / **Password**: viewer123 / **Department**: Cardiology
+### Department Incharge (Department Staff)
+- **Email**: incharge1@biocode.com / **Password**: incharge123 / **Department**: Emergency Department
+- **Email**: incharge2@biocode.com / **Password**: incharge123 / **Department**: Intensive Care Unit
+- **Email**: incharge3@biocode.com / **Password**: incharge123 / **Department**: Radiology
+- **Email**: incharge4@biocode.com / **Password**: incharge123 / **Department**: Cardiology
 
 ## Project Structure
 
@@ -339,52 +413,98 @@ biocode/
 - `DELETE /maintenance/{id}` - Delete maintenance schedule
 - `GET /maintenance/stats/summary` - Get maintenance statistics
 
+### Notification Endpoints
+- `GET /notifications/` - List notifications (with pagination and filters)
+- `GET /notifications/unread-count` - Get unread notification count
+- `POST /notifications/{id}/mark-read` - Mark notification as read
+- `POST /notifications/mark-all-read` - Mark all notifications as read
+- `DELETE /notifications/{id}` - Delete notification
+- `POST /notifications/` - Create notification (Manager/Admin only)
+
+### Analytics Endpoints
+- `GET /analytics/equipment/downtime` - Equipment downtime analytics
+- `GET /analytics/equipment/availability` - Equipment availability summary
+- `GET /analytics/maintenance/compliance` - Maintenance compliance statistics
+- `GET /analytics/tickets/resolution-time` - Ticket resolution time analytics
+- `GET /analytics/dashboard/summary` - Comprehensive dashboard summary
+- `GET /analytics/departments/repairs` - Repairs by department
+
+### Reports Endpoints
+- `GET /reports/equipment/excel` - Download equipment report
+- `GET /reports/tickets/excel` - Download tickets report
+- `GET /reports/maintenance/excel` - Download maintenance report
+
 ## Key Features by Role
 
 ### Super Admin Dashboard
 - User management with CRUD operations
-- View all user performance reports
-- System-wide statistics
 - Full access to all features
+- System-wide statistics with interactive charts
+- Generate all reports
 
-### Supervisor Dashboard
+### Manager Dashboard
 - Equipment and ticket management
-- Assign tickets to technicians
+- Assign tickets to support staff
 - Update equipment status
 - Close tickets
-- System-wide statistics
+- Generate reports
+- System-wide statistics with charts
+- View repairs by department
 
-### Tech Dashboard
-- Personal performance metrics
+### Department Head Dashboard
+- Department-specific equipment management
+- View and assign department tickets
+- Update equipment status
+- Cannot close tickets
+- Department statistics
+
+### Support Dashboard
+- Personal performance metrics with trend charts
 - Assigned tickets only
 - Ticket status updates (except Close)
+- Maintenance schedules assigned to them
+- Cannot access equipment or departments pages
 
-### Viewer Dashboard
-- Read-only access
-- Can create tickets
+### Department Incharge Dashboard
+- Special landing page with action buttons
+- Create new tickets
 - **Can only view their own tickets**
-- **Equipment section hidden**
-- System-wide ticket statistics
-- Cannot modify data
+- **Equipment and Departments sections hidden**
+- Cannot modify ticket status to Resolved or Closed
 
 ## Database Schema
 
 ### Users Table
 - id, email, full_name, password_hash
-- role (super_admin, supervisor, tech, viewer)
+- role (super_admin, manager, department_head, support, department_incharge)
+- support_type (for support role: biomed_tech, aircon_tech, plumber, carpenter, painter, electrician, it_staff, house_keeping)
+- department_id (foreign key to departments)
 - is_active
 
 ### Equipment Table
 - id, asset_tag, device_name, manufacturer, model
 - serial_number, status, department_id
 - repair_count (auto-incremented on ticket resolution)
+- total_downtime_minutes, last_downtime_start, is_currently_down
+- criticality (low, medium, high, critical)
 
 ### Tickets Table
 - id, ticket_code, equipment_id, title, description
 - status (open, in_progress, resolved, closed)
 - priority (low, medium, high)
-- reported_by_user_id, assigned_to_user_id
+- reported_by_user_id, assigned_to_user_id, department_id
 - created_at, updated_at
+
+### Maintenance Schedules Table
+- id, equipment_id, maintenance_type, frequency_days
+- last_maintenance_date, next_maintenance_date
+- assigned_to_user_id, notes, is_active
+- created_at, updated_at
+
+### Notifications Table
+- id, user_id, title, message
+- notification_type, related_entity_type, related_entity_id
+- is_read, created_at, read_at
 
 ### Departments Table
 - id, name, code
@@ -465,5 +585,35 @@ For issues and questions, please contact the development team.
 
 ---
 
-**Version**: 1.0.0  
+**Version**: 2.0.0  
 **Last Updated**: February 2026
+
+## Recent Updates (v2.0.0)
+
+### Role System Overhaul
+- Renamed and restructured user roles for better clarity
+- Added support_type field for technical staff specialization
+- Updated all permissions and access controls
+
+### Notifications System
+- Real-time notification bell with unread count
+- Automatic notifications for all major events
+- Role-based notification routing
+- Notification management (mark read, delete, filter)
+
+### Reports Generation
+- Excel report downloads for equipment, tickets, and maintenance
+- Advanced filtering options
+- Manager and Super Admin access only
+
+### Enhanced Dashboard
+- Chart.js integration for data visualization
+- Line charts, pie charts, and bar charts
+- Department repairs analytics
+- Role-specific dashboards
+
+### Maintenance Tracking
+- Scheduled maintenance with automatic date calculation
+- Overdue maintenance alerts
+- Department-based filtering
+- Maintenance completion notifications

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Navigation } from "../components/Navigation";
+import { Pagination } from "../components/Pagination";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -9,6 +10,7 @@ type User = {
   email: string;
   full_name: string;
   role: string;
+  support_type?: string | null;
   is_active: boolean;
   department_id?: string | null;
 };
@@ -19,6 +21,14 @@ type Department = {
   code?: string | null;
 };
 
+type PaginatedResponse = {
+  items: User[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+};
+
 export function UsersPage() {
   const auth = useAuth();
   const nav = useNavigate();
@@ -27,12 +37,19 @@ export function UsersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize] = useState(20);
+  
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editEmail, setEditEmail] = useState("");
   const [editFullName, setEditFullName] = useState("");
   const [editRole, setEditRole] = useState("");
+  const [editSupportType, setEditSupportType] = useState("");
   const [editDepartmentId, setEditDepartmentId] = useState("");
   const [updating, setUpdating] = useState(false);
   
@@ -44,7 +61,8 @@ export function UsersPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [newFullName, setNewFullName] = useState("");
-  const [newRole, setNewRole] = useState("tech");
+  const [newRole, setNewRole] = useState("support");
+  const [newSupportType, setNewSupportType] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newDepartmentId, setNewDepartmentId] = useState("");
   
@@ -54,16 +72,28 @@ export function UsersPage() {
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [currentPage]);
 
   const loadUsers = async () => {
     try {
       setLoading(true);
+      
+      // Build query params
+      const params = new URLSearchParams();
+      params.append("page", currentPage.toString());
+      params.append("page_size", pageSize.toString());
+      
+      const queryString = params.toString();
+      const usersUrl = `/auth/users?${queryString}`;
+      
       const [usersData, departmentsData] = await Promise.all([
-        apiFetch<User[]>("/auth/users"),
-        apiFetch<Department[]>("/departments/"),
+        apiFetch<PaginatedResponse>(usersUrl),
+        apiFetch<any>("/departments/"),
       ]);
-      setUsers(usersData);
+      
+      setUsers(usersData.items);
+      setTotalPages(usersData.total_pages);
+      setTotalItems(usersData.total);
       setDepartments(departmentsData);
       setError(null);
     } catch (e: any) {
@@ -78,6 +108,7 @@ export function UsersPage() {
     setEditEmail(user.email);
     setEditFullName(user.full_name);
     setEditRole(user.role);
+    setEditSupportType(user.support_type || "");
     setEditDepartmentId(user.department_id || "");
     setShowEditModal(true);
   };
@@ -96,6 +127,7 @@ export function UsersPage() {
           email: editEmail,
           full_name: editFullName,
           role: editRole,
+          support_type: editRole === "support" ? editSupportType || null : null,
           department_id: editDepartmentId || null,
         }),
       });
@@ -153,6 +185,7 @@ export function UsersPage() {
           email: newEmail,
           full_name: newFullName,
           role: newRole,
+          support_type: newRole === "support" ? newSupportType || null : null,
           password: newPassword,
           department_id: newDepartmentId || null,
         }),
@@ -160,7 +193,8 @@ export function UsersPage() {
       setShowAddModal(false);
       setNewEmail("");
       setNewFullName("");
-      setNewRole("tech");
+      setNewRole("support");
+      setNewSupportType("");
       setNewPassword("");
       setNewDepartmentId("");
       await loadUsers();
@@ -199,15 +233,38 @@ export function UsersPage() {
     switch (role) {
       case "super_admin":
         return "bg-purple-100 text-purple-700";
-      case "supervisor":
+      case "manager":
         return "bg-blue-100 text-blue-700";
-      case "tech":
+      case "department_head":
+        return "bg-indigo-100 text-indigo-700";
+      case "support":
         return "bg-green-100 text-green-700";
-      case "viewer":
+      case "department_incharge":
         return "bg-gray-100 text-gray-700";
       default:
         return "bg-gray-100 text-gray-700";
     }
+  };
+
+  const formatRoleDisplay = (role: string, supportType?: string | null) => {
+    const roleText = role.replace("_", " ");
+    if (role === "support" && supportType) {
+      // Format support type for display
+      const typeMap: Record<string, string> = {
+        biomed_tech: "Biomed Tech",
+        maintenance_aircon: "Aircon Tech",
+        maintenance_plumber: "Plumber",
+        maintenance_carpenter: "Carpenter",
+        maintenance_painter: "Painter",
+        maintenance_electrician: "Electrician",
+        it_staff: "IT Staff",
+        house_keeping: "House Keeping",
+        other: "Other"
+      };
+      const supportTypeText = typeMap[supportType] || supportType.replace("_", " ");
+      return `${roleText} (${supportTypeText})`;
+    }
+    return roleText;
   };
 
   const getStatusBadgeColor = (isActive: boolean) => {
@@ -374,7 +431,7 @@ export function UsersPage() {
                             user.role
                           )}`}
                         >
-                          {user.role.replace("_", " ")}
+                          {formatRoleDisplay(user.role, user.support_type)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -439,6 +496,17 @@ export function UsersPage() {
               )}
             </div>
           )}
+          
+          {/* Pagination */}
+          {!loading && users.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
 
         {/* Add User Modal */}
@@ -496,12 +564,39 @@ export function UsersPage() {
                     onChange={(e) => setNewRole(e.target.value)}
                     className="input-field"
                   >
-                    <option value="tech">Tech</option>
-                    <option value="supervisor">Supervisor</option>
+                    <option value="support">Support</option>
+                    <option value="department_head">Department Head</option>
+                    <option value="manager">Manager</option>
                     <option value="super_admin">Super Admin</option>
-                    <option value="viewer">Viewer</option>
+                    <option value="department_incharge">Department Incharge</option>
                   </select>
                 </div>
+
+                {newRole === "support" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Support Type
+                    </label>
+                    <select
+                      value={newSupportType}
+                      onChange={(e) => setNewSupportType(e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="biomed_tech">Biomed Tech</option>
+                      <optgroup label="Maintenance/Facility">
+                        <option value="maintenance_aircon">Aircon Tech</option>
+                        <option value="maintenance_plumber">Plumber</option>
+                        <option value="maintenance_carpenter">Carpenter</option>
+                        <option value="maintenance_painter">Painter</option>
+                        <option value="maintenance_electrician">Electrician</option>
+                      </optgroup>
+                      <option value="it_staff">IT Staff</option>
+                      <option value="house_keeping">House Keeping</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -541,8 +636,10 @@ export function UsersPage() {
                     setShowAddModal(false);
                     setNewEmail("");
                     setNewFullName("");
-                    setNewRole("tech");
+                    setNewRole("support");
+                    setNewSupportType("");
                     setNewPassword("");
+                    setNewDepartmentId("");
                     setError(null);
                   }}
                   disabled={updating}
@@ -596,11 +693,38 @@ export function UsersPage() {
                     className="input-field"
                   >
                     <option value="super_admin">Super Admin</option>
-                    <option value="supervisor">Supervisor</option>
-                    <option value="tech">Tech</option>
-                    <option value="viewer">Viewer</option>
+                    <option value="manager">Manager</option>
+                    <option value="department_head">Department Head</option>
+                    <option value="support">Support</option>
+                    <option value="department_incharge">Department Incharge</option>
                   </select>
                 </div>
+
+                {editRole === "support" && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Support Type
+                    </label>
+                    <select
+                      value={editSupportType}
+                      onChange={(e) => setEditSupportType(e.target.value)}
+                      className="input-field"
+                    >
+                      <option value="">Select Type</option>
+                      <option value="biomed_tech">Biomed Tech</option>
+                      <optgroup label="Maintenance/Facility">
+                        <option value="maintenance_aircon">Aircon Tech</option>
+                        <option value="maintenance_plumber">Plumber</option>
+                        <option value="maintenance_carpenter">Carpenter</option>
+                        <option value="maintenance_painter">Painter</option>
+                        <option value="maintenance_electrician">Electrician</option>
+                      </optgroup>
+                      <option value="it_staff">IT Staff</option>
+                      <option value="house_keeping">House Keeping</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -824,9 +948,9 @@ export function UsersPage() {
           <div className="stat-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Technicians</p>
+                <p className="text-sm text-gray-500">Support Staff</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {users.filter((u) => u.role === "tech").length}
+                  {users.filter((u) => u.role === "support").length}
                 </p>
               </div>
               <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
@@ -856,9 +980,9 @@ export function UsersPage() {
           <div className="stat-card">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-500">Supervisors</p>
+                <p className="text-sm text-gray-500">Managers</p>
                 <p className="text-2xl font-bold text-gray-900 mt-1">
-                  {users.filter((u) => u.role === "supervisor").length}
+                  {users.filter((u) => u.role === "manager").length}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">

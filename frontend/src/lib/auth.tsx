@@ -2,7 +2,7 @@ import React, { createContext, useContext, useMemo, useState } from "react";
 
 import { apiFetch, login as apiLogin, setToken } from "./api";
 
-type UserRole = "super_admin" | "supervisor" | "tech" | "viewer";
+type UserRole = "super_admin" | "manager" | "department_head" | "support" | "department_incharge";
 
 type User = {
   id: string;
@@ -20,15 +20,22 @@ type AuthContextValue = {
   logout: () => void;
   // Permission helpers
   isSuperAdmin: () => boolean;
-  isSupervisor: () => boolean;
-  isSupervisorOrAbove: () => boolean;
-  isTech: () => boolean;
-  isViewer: () => boolean;
+  isManager: () => boolean;
+  isManagerOrAbove: () => boolean;
+  isDepartmentHead: () => boolean;
+  isDepartmentHeadOrAbove: () => boolean;
+  isSupport: () => boolean;
+  isDepartmentIncharge: () => boolean;
   canCloseTickets: () => boolean;
   canUpdateEquipmentStatus: () => boolean;
   canCreateEquipment: () => boolean;
   canManageDepartments: () => boolean;
   canViewAllTickets: () => boolean;
+  // Legacy compatibility
+  isSupervisor: () => boolean;
+  isSupervisorOrAbove: () => boolean;
+  isTech: () => boolean;
+  isViewer: () => boolean;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -60,16 +67,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Permission helper functions
   const isSuperAdmin = () => user?.role === "super_admin";
-  const isSupervisor = () => user?.role === "supervisor";
-  const isSupervisorOrAbove = () => user?.role === "super_admin" || user?.role === "supervisor";
-  const isTech = () => user?.role === "tech";
-  const isViewer = () => user?.role === "viewer";
+  const isManager = () => user?.role === "manager";
+  const isManagerOrAbove = () => user?.role === "super_admin" || user?.role === "manager";
+  const isDepartmentHead = () => user?.role === "department_head";
+  const isDepartmentHeadOrAbove = () => user?.role === "super_admin" || user?.role === "manager" || user?.role === "department_head";
+  const isSupport = () => user?.role === "support";
+  const isDepartmentIncharge = () => user?.role === "department_incharge";
   
-  const canCloseTickets = () => isSupervisorOrAbove();
-  const canUpdateEquipmentStatus = () => isSupervisorOrAbove();
-  const canCreateEquipment = () => isSupervisorOrAbove();
+  // Legacy compatibility
+  const isSupervisor = () => isManager();
+  const isSupervisorOrAbove = () => isManagerOrAbove();
+  const isTech = () => isSupport();
+  const isViewer = () => isDepartmentIncharge();
+  
+  const canCloseTickets = () => isManagerOrAbove();
+  const canUpdateEquipmentStatus = () => isDepartmentHeadOrAbove();
+  const canCreateEquipment = () => isDepartmentHeadOrAbove();
   const canManageDepartments = () => isSuperAdmin();
-  const canViewAllTickets = () => isSupervisorOrAbove();
+  const canViewAllTickets = () => isManagerOrAbove();
 
   const value = useMemo(
     () => ({ 
@@ -79,15 +94,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login, 
       logout,
       isSuperAdmin,
-      isSupervisor,
-      isSupervisorOrAbove,
-      isTech,
-      isViewer,
+      isManager,
+      isManagerOrAbove,
+      isDepartmentHead,
+      isDepartmentHeadOrAbove,
+      isSupport,
+      isDepartmentIncharge,
       canCloseTickets,
       canUpdateEquipmentStatus,
       canCreateEquipment,
       canManageDepartments,
       canViewAllTickets,
+      // Legacy compatibility
+      isSupervisor,
+      isSupervisorOrAbove,
+      isTech,
+      isViewer,
     }),
     [user, loading],
   );

@@ -1,5 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../lib/auth";
+import { NotificationBell } from "./NotificationBell";
 
 export function Navigation() {
   const auth = useAuth();
@@ -92,6 +93,20 @@ export function Navigation() {
               </Link>
             )}
             
+            {/* Reports link - only visible to supervisor and super_admin */}
+            {auth.isSupervisorOrAbove() && (
+              <Link
+                to="/reports"
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  isActive("/reports")
+                    ? "bg-blue-50 text-blue-600"
+                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                }`}
+              >
+                Reports
+              </Link>
+            )}
+            
             {/* Users link - only visible to super_admin */}
             {auth.isSuperAdmin() && (
               <Link
@@ -108,9 +123,19 @@ export function Navigation() {
           </div>
 
           {/* User Menu */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+            <NotificationBell />
             <div className="text-sm text-gray-600 hidden sm:block">
-              <span className="font-medium">{auth.user?.full_name}</span>
+              {auth.isTech() ? (
+                <Link 
+                  to={`/users/${auth.user?.id}`}
+                  className="font-medium hover:text-blue-600 transition-colors"
+                >
+                  {auth.user?.full_name}
+                </Link>
+              ) : (
+                <span className="font-medium">{auth.user?.full_name}</span>
+              )}
               <span className="ml-2 px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
                 {auth.user?.role.replace("_", " ")}
               </span>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from sqlalchemy import func, extract
@@ -51,18 +51,47 @@ def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
 
 
-@router.get("/users", response_model=list[UserOut])
+@router.get("/users")
 def list_users(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """List all users - returns all users for super_admin, only active for others"""
     if current_user.role == UserRole.super_admin:
         # Super admin can see all users including inactive
-        return db.query(User).all()
+        query = db.query(User)
     else:
         # Others only see active users (for ticket assignment)
-        return db.query(User).filter(User.is_active == True).all()
+        query = db.query(User).filter(User.is_active == True)
+    
+    # Get total count
+    total = query.count()
+    
+    # Apply pagination
+    offset = (page - 1) * page_size
+    users = query.order_by(User.full_name).offset(offset).limit(page_size).all()
+    
+    # Convert to dict manually
+    items = []
+    for user in users:
+        items.append({
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "role": user.role.value,
+            "is_active": user.is_active,
+            "department_id": user.department_id,
+        })
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size
+    }
 
 
 @router.patch("/users/{user_id}", response_model=UserOut)

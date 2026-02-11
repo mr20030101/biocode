@@ -40,10 +40,10 @@ def seed_users(db: Session, departments):
     """Create users with different roles and assign to departments"""
     print("\n👥 Seeding users...")
     
-    # Get IT department for supervisor and techs
+    # Get IT department for manager and support staff
     it_dept = next((d for d in departments if d.code == "IT"), None)
     
-    # Get other departments for other users
+    # Get other departments for department_incharge users
     ed_dept = next((d for d in departments if d.code == "ED"), None)
     icu_dept = next((d for d in departments if d.code == "ICU"), None)
     rad_dept = next((d for d in departments if d.code == "RAD"), None)
@@ -55,62 +55,87 @@ def seed_users(db: Session, departments):
             "password": "admin123",
             "full_name": "Super Admin (Owner)",
             "role": UserRole.super_admin,
+            "support_type": None,
             "department": None  # Super admin is the owner, not tied to a department
         },
         {
-            "email": "supervisor@biocode.com",
-            "password": "super123",
-            "full_name": "John Supervisor",
-            "role": UserRole.supervisor,
+            "email": "manager@biocode.com",
+            "password": "manager123",
+            "full_name": "John Manager",
+            "role": UserRole.manager,
+            "support_type": None,
             "department": it_dept  # IT Department
         },
         {
-            "email": "tech1@biocode.com",
-            "password": "tech123",
+            "email": "support1@biocode.com",
+            "password": "support123",
             "full_name": "Sarah Johnson",
-            "role": UserRole.tech,
-            "department": it_dept  # IT Department
+            "role": UserRole.support,
+            "support_type": "biomed_tech",
+            "department": it_dept  # IT Department - Biomed Tech
         },
         {
-            "email": "tech2@biocode.com",
-            "password": "tech123",
+            "email": "support2@biocode.com",
+            "password": "support123",
             "full_name": "Mike Davis",
-            "role": UserRole.tech,
-            "department": it_dept  # IT Department
+            "role": UserRole.support,
+            "support_type": "maintenance_electrician",
+            "department": it_dept  # IT Department - Electrician
         },
         {
-            "email": "tech3@biocode.com",
-            "password": "tech123",
+            "email": "support3@biocode.com",
+            "password": "support123",
             "full_name": "Emily Chen",
-            "role": UserRole.tech,
-            "department": it_dept  # IT Department
+            "role": UserRole.support,
+            "support_type": "maintenance_aircon",
+            "department": it_dept  # IT Department - Aircon Tech
         },
         {
-            "email": "viewer1@biocode.com",
-            "password": "viewer123",
+            "email": "support4@biocode.com",
+            "password": "support123",
+            "full_name": "Carlos Rodriguez",
+            "role": UserRole.support,
+            "support_type": "maintenance_plumber",
+            "department": it_dept  # IT Department - Plumber
+        },
+        {
+            "email": "support5@biocode.com",
+            "password": "support123",
+            "full_name": "David Kim",
+            "role": UserRole.support,
+            "support_type": "it_staff",
+            "department": it_dept  # IT Department - IT Staff
+        },
+        {
+            "email": "incharge1@biocode.com",
+            "password": "incharge123",
             "full_name": "Dr. Robert Smith",
-            "role": UserRole.viewer,
+            "role": UserRole.department_incharge,
+            "support_type": None,
             "department": ed_dept  # Emergency Department
         },
         {
-            "email": "viewer2@biocode.com",
-            "password": "viewer123",
+            "email": "incharge2@biocode.com",
+            "password": "incharge123",
             "full_name": "Dr. Lisa Anderson",
-            "role": UserRole.viewer,
+            "role": UserRole.department_incharge,
+            "support_type": None,
             "department": icu_dept  # ICU
         },
         {
-            "email": "viewer3@biocode.com",
-            "password": "viewer123",
+            "email": "incharge3@biocode.com",
+            "password": "incharge123",
             "full_name": "Dr. James Wilson",
-            "role": UserRole.viewer,
+            "role": UserRole.department_incharge,
+            "support_type": None,
             "department": rad_dept  # Radiology
         },
         {
-            "email": "viewer4@biocode.com",
-            "password": "viewer123",
+            "email": "incharge4@biocode.com",
+            "password": "incharge123",
             "full_name": "Dr. Maria Garcia",
-            "role": UserRole.viewer,
+            "role": UserRole.department_incharge,
+            "support_type": None,
             "department": card_dept  # Cardiology
         },
     ]
@@ -122,6 +147,7 @@ def seed_users(db: Session, departments):
             password_hash=hash_password(data["password"]),
             full_name=data["full_name"],
             role=data["role"],
+            support_type=data["support_type"],
             is_active=True,
             department_id=data["department"].id if data["department"] else None
         )
@@ -133,8 +159,16 @@ def seed_users(db: Session, departments):
     it_count = sum(1 for u in users if u.department_id == (it_dept.id if it_dept else None))
     other_count = sum(1 for u in users if u.department_id and u.department_id != (it_dept.id if it_dept else None))
     print(f"   - Super Admin (Owner): 1")
-    print(f"   - IT Department: {it_count}")
-    print(f"   - Other Departments: {other_count}")
+    print(f"   - IT Department (Manager + Support): {it_count}")
+    print(f"   - Other Departments (Incharge): {other_count}")
+    
+    # Print support types breakdown
+    support_users = [u for u in users if u.role == UserRole.support]
+    if support_users:
+        print(f"   - Support Staff Breakdown:")
+        for user in support_users:
+            print(f"     • {user.full_name}: {user.support_type}")
+    
     return users
 
 
@@ -295,7 +329,7 @@ def seed_tickets(db: Session, equipment_list, users):
     ]
     
     tickets = []
-    techs = [u for u in users if u.role == UserRole.tech]
+    support_staff = [u for u in users if u.role == UserRole.support]
     
     # Create 15 tickets with various statuses
     for i in range(15):
@@ -333,7 +367,7 @@ def seed_tickets(db: Session, equipment_list, users):
             concern=template["concern"],
             reported_by=reporter.full_name,
             reported_by_user_id=reporter.id,
-            assigned_to_user_id=random.choice(techs).id if status != TicketStatus.open else None,
+            assigned_to_user_id=random.choice(support_staff).id if status != TicketStatus.open else None,
             created_at=created_at,
             updated_at=created_at
         )
@@ -359,7 +393,7 @@ def seed_equipment_logs(db: Session, equipment_list, users):
     ]
     
     logs = []
-    techs = [u for u in users if u.role == UserRole.tech]
+    support_staff = [u for u in users if u.role == UserRole.support]
     
     # Create 2-5 logs for equipment with repair_count > 0
     for equip in equipment_list:
@@ -368,7 +402,7 @@ def seed_equipment_logs(db: Session, equipment_list, users):
             
             for i in range(num_logs):
                 template = random.choice(log_templates)
-                tech = random.choice(techs)
+                support = random.choice(support_staff)
                 
                 # Random date within equipment's service life
                 days_ago = random.randint(30, 365)
@@ -376,7 +410,7 @@ def seed_equipment_logs(db: Session, equipment_list, users):
                 
                 log = EquipmentLog(
                     equipment_id=equip.id,
-                    created_by_user_id=tech.id,
+                    created_by_user_id=support.id,
                     log_type=template["type"],
                     title=template["title"],
                     description=template["desc"],
@@ -405,7 +439,7 @@ def seed_maintenance_schedules(db: Session, equipment_list, users):
     ]
     
     schedules = []
-    techs = [u for u in users if u.role in [UserRole.tech, UserRole.supervisor]]
+    support_staff = [u for u in users if u.role in [UserRole.support, UserRole.manager]]
     
     # Only create schedules for active equipment with departments
     active_equipment = [e for e in equipment_list if e.status == EquipmentStatus.active and e.department_id]
@@ -430,8 +464,8 @@ def seed_maintenance_schedules(db: Session, equipment_list, users):
                 # Calculate next maintenance date
                 next_maintenance = last_maintenance + timedelta(days=maint["frequency"])
                 
-                # Randomly assign to tech (80% chance)
-                assigned_tech = random.choice(techs) if random.random() < 0.8 else None
+                # Randomly assign to support staff (80% chance)
+                assigned_support = random.choice(support_staff) if random.random() < 0.8 else None
                 
                 # Generate notes based on maintenance type
                 notes_options = {
@@ -469,7 +503,7 @@ def seed_maintenance_schedules(db: Session, equipment_list, users):
                     frequency_days=maint["frequency"],
                     last_maintenance_date=last_maintenance if days_since_last > 0 else None,
                     next_maintenance_date=next_maintenance,
-                    assigned_to_user_id=assigned_tech.id if assigned_tech else None,
+                    assigned_to_user_id=assigned_support.id if assigned_support else None,
                     notes=notes,
                     is_active=True
                 )
@@ -491,6 +525,108 @@ def seed_maintenance_schedules(db: Session, equipment_list, users):
     return schedules
 
 
+def seed_notifications(db: Session, users, tickets, equipment_list, maintenance_schedules):
+    """Create sample notifications for users"""
+    print("\n🔔 Seeding notifications...")
+    
+    from app.models import Notification
+    
+    notification_templates = [
+        {
+            "type": "ticket_assigned",
+            "title": "New Ticket Assigned",
+            "message": "You have been assigned to ticket #{ticket_code}",
+            "entity_type": "ticket",
+        },
+        {
+            "type": "ticket_updated",
+            "title": "Ticket Status Updated",
+            "message": "Ticket #{ticket_code} status has been updated to In Progress",
+            "entity_type": "ticket",
+        },
+        {
+            "type": "maintenance_due",
+            "title": "Maintenance Due Soon",
+            "message": "Preventive maintenance for {equipment_name} is due in 3 days",
+            "entity_type": "maintenance",
+        },
+        {
+            "type": "maintenance_overdue",
+            "title": "Maintenance Overdue",
+            "message": "Calibration for {equipment_name} is overdue by 5 days",
+            "entity_type": "maintenance",
+        },
+        {
+            "type": "equipment_status",
+            "title": "Equipment Status Changed",
+            "message": "{equipment_name} status changed to Out of Service",
+            "entity_type": "equipment",
+        },
+    ]
+    
+    notifications = []
+    
+    # Create 3-5 notifications per user
+    for user in users:
+        num_notifications = random.randint(3, 5)
+        
+        for _ in range(num_notifications):
+            template = random.choice(notification_templates)
+            
+            # Determine related entity
+            related_id = None
+            message = template["message"]
+            
+            if template["entity_type"] == "ticket" and tickets:
+                ticket = random.choice(tickets)
+                related_id = ticket.id
+                message = message.replace("{ticket_code}", ticket.ticket_code)
+            elif template["entity_type"] == "equipment" and equipment_list:
+                equipment = random.choice(equipment_list)
+                related_id = equipment.id
+                message = message.replace("{equipment_name}", equipment.device_name)
+            elif template["entity_type"] == "maintenance" and maintenance_schedules:
+                schedule = random.choice(maintenance_schedules)
+                related_id = schedule.id
+                # Get equipment name
+                equipment = db.query(Equipment).filter(Equipment.id == schedule.equipment_id).first()
+                if equipment:
+                    message = message.replace("{equipment_name}", equipment.device_name)
+            
+            # Random created time (last 7 days)
+            days_ago = random.randint(0, 7)
+            hours_ago = random.randint(0, 23)
+            created_at = datetime.utcnow() - timedelta(days=days_ago, hours=hours_ago)
+            
+            # 60% chance of being unread
+            is_read = random.random() > 0.6
+            read_at = created_at + timedelta(hours=random.randint(1, 12)) if is_read else None
+            
+            notification = Notification(
+                user_id=user.id,
+                title=template["title"],
+                message=message,
+                notification_type=template["type"],
+                related_entity_type=template["entity_type"],
+                related_entity_id=related_id,
+                is_read=is_read,
+                created_at=created_at,
+                read_at=read_at,
+            )
+            db.add(notification)
+            notifications.append(notification)
+    
+    db.commit()
+    print(f"✅ Created {len(notifications)} notifications")
+    
+    # Print statistics
+    unread = sum(1 for n in notifications if not n.is_read)
+    print(f"   📊 Unread: {unread}")
+    print(f"   📊 Read: {len(notifications) - unread}")
+    
+    return notifications
+
+
 def main():
     """Main seeder function"""
     print("🌱 Starting database seeding...\n")
@@ -510,6 +646,7 @@ def main():
         tickets = seed_tickets(db, equipment_list, users)
         logs = seed_equipment_logs(db, equipment_list, users)
         schedules = seed_maintenance_schedules(db, equipment_list, users)
+        notifications = seed_notifications(db, users, tickets, equipment_list, schedules)
         
         print("\n" + "="*50)
         print("✨ Database seeding completed successfully!")
@@ -522,13 +659,16 @@ def main():
         print(f"   Tickets: {len(tickets)}")
         print(f"   Equipment Logs: {len(logs)}")
         print(f"   Maintenance Schedules: {len(schedules)}")
+        print(f"   Notifications: {len(notifications)}")
         
         print("\n🔑 Test Credentials:")
-        print("   Super Admin (Owner): superadmin@biocode.com / admin123")
-        print("   Supervisor (IT):     supervisor@biocode.com / super123")
-        print("   Tech (IT):           tech1@biocode.com / tech123")
-        print("   Viewer (ED):         viewer1@biocode.com / viewer123")
-        print("   Viewer (ICU):        viewer2@biocode.com / viewer123")
+        print("   Super Admin (Owner):        superadmin@biocode.com / admin123")
+        print("   Manager (IT):               manager@biocode.com / manager123")
+        print("   Support - Biomed (IT):      support1@biocode.com / support123")
+        print("   Support - Electrician (IT): support2@biocode.com / support123")
+        print("   Support - Aircon (IT):      support3@biocode.com / support123")
+        print("   Dept Incharge (ED):         incharge1@biocode.com / incharge123")
+        print("   Dept Incharge (ICU):        incharge2@biocode.com / incharge123")
         
     except Exception as e:
         print(f"\n❌ Error during seeding: {e}")

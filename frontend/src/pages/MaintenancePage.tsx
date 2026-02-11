@@ -92,17 +92,25 @@ export function MaintenancePage() {
       const url = `/maintenance/${queryString ? `?${queryString}` : ""}`;
       
       const [schedulesData, equipmentData, departmentsData, usersData, statsData] = await Promise.all([
-        apiFetch<MaintenanceSchedule[]>(url),
-        apiFetch<Equipment[]>("/equipment/"),
-        apiFetch<Department[]>("/departments/"),
-        apiFetch<User[]>("/auth/users"),
+        apiFetch<any>(url),
+        apiFetch<any>("/equipment/"),
+        apiFetch<any>("/departments/"),
+        apiFetch<any>("/auth/users"),
         apiFetch<MaintenanceStats>("/maintenance/stats/summary"),
       ]);
       
-      setSchedules(schedulesData);
-      setEquipment(equipmentData);
+      // Handle paginated responses
+      let allSchedules = schedulesData.items || schedulesData;
+      
+      // Filter for tech users - only show schedules assigned to them
+      if (auth.isTech()) {
+        allSchedules = allSchedules.filter((s: MaintenanceSchedule) => s.assigned_to_user_id === auth.user?.id);
+      }
+      
+      setSchedules(allSchedules);
+      setEquipment(equipmentData.items || equipmentData);
       setDepartments(departmentsData);
-      setUsers(usersData.filter(u => u.role === "tech" || u.role === "supervisor"));
+      setUsers((usersData.items || usersData).filter((u: any) => u.role === "tech" || u.role === "supervisor"));
       setStats(statsData);
       setError(null);
     } catch (e: any) {
@@ -263,8 +271,12 @@ export function MaintenancePage() {
             <div className="stat-card">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Active</p>
-                  <p className="text-3xl font-bold text-gray-900 mt-2">{stats.total_active_schedules}</p>
+                  <p className="text-sm font-medium text-gray-600">
+                    {auth.isTech() ? "My Active Tasks" : "Total Active"}
+                  </p>
+                  <p className="text-3xl font-bold text-gray-900 mt-2">
+                    {auth.isTech() ? schedules.length : stats.total_active_schedules}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -278,7 +290,11 @@ export function MaintenancePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Overdue</p>
-                  <p className="text-3xl font-bold text-red-600 mt-2">{stats.overdue}</p>
+                  <p className="text-3xl font-bold text-red-600 mt-2">
+                    {auth.isTech() 
+                      ? schedules.filter(s => new Date(s.next_maintenance_date) < new Date()).length
+                      : stats.overdue}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -292,7 +308,16 @@ export function MaintenancePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Next 7 Days</p>
-                  <p className="text-3xl font-bold text-orange-600 mt-2">{stats.upcoming_7_days}</p>
+                  <p className="text-3xl font-bold text-orange-600 mt-2">
+                    {auth.isTech()
+                      ? schedules.filter(s => {
+                          const next = new Date(s.next_maintenance_date);
+                          const now = new Date();
+                          const diffDays = Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          return diffDays >= 0 && diffDays <= 7;
+                        }).length
+                      : stats.upcoming_7_days}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -306,7 +331,16 @@ export function MaintenancePage() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-gray-600">Next 30 Days</p>
-                  <p className="text-3xl font-bold text-green-600 mt-2">{stats.upcoming_30_days}</p>
+                  <p className="text-3xl font-bold text-green-600 mt-2">
+                    {auth.isTech()
+                      ? schedules.filter(s => {
+                          const next = new Date(s.next_maintenance_date);
+                          const now = new Date();
+                          const diffDays = Math.ceil((next.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                          return diffDays >= 0 && diffDays <= 30;
+                        }).length
+                      : stats.upcoming_30_days}
+                  </p>
                 </div>
                 <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
                   <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -606,9 +640,19 @@ export function MaintenancePage() {
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
                   <p className="mt-2 text-sm text-gray-500">
-                    {filterView === "all" && "No maintenance schedules yet. Create your first schedule."}
-                    {filterView === "overdue" && "No overdue maintenance. Great job!"}
-                    {filterView === "upcoming" && "No maintenance scheduled in the next 30 days."}
+                    {auth.isTech() ? (
+                      <>
+                        {filterView === "all" && "No maintenance tasks assigned to you yet."}
+                        {filterView === "overdue" && "No overdue maintenance tasks. Great job!"}
+                        {filterView === "upcoming" && "No maintenance tasks scheduled in the next 30 days."}
+                      </>
+                    ) : (
+                      <>
+                        {filterView === "all" && "No maintenance schedules yet. Create your first schedule."}
+                        {filterView === "overdue" && "No overdue maintenance. Great job!"}
+                        {filterView === "upcoming" && "No maintenance scheduled in the next 30 days."}
+                      </>
+                    )}
                   </p>
                 </div>
               )}

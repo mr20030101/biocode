@@ -7,19 +7,22 @@ from sqlalchemy.orm import Session
 from .auth import get_db, get_current_user
 from .models import MaintenanceSchedule, Equipment, User, UserRole
 from .schemas import MaintenanceScheduleCreate, MaintenanceScheduleOut, MaintenanceScheduleUpdate
-from .permissions import require_supervisor_or_above
+from .permissions import require_manager_or_above
+from . import notification_service
 
 
 router = APIRouter(prefix="/maintenance", tags=["maintenance"])
 
 
-@router.get("/", response_model=List[MaintenanceScheduleOut])
+@router.get("/", response_model=dict)
 def list_maintenance_schedules(
     equipment_id: Optional[str] = None,
     department_id: Optional[str] = None,
     is_active: Optional[bool] = None,
     overdue: Optional[bool] = None,
     upcoming_days: Optional[int] = None,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -57,7 +60,36 @@ def list_maintenance_schedules(
             MaintenanceSchedule.next_maintenance_date <= future_date
         )
     
-    return query.order_by(MaintenanceSchedule.next_maintenance_date).all()
+    # Get total count
+    total = query.count()
+    
+    # Apply pagination
+    offset = (page - 1) * page_size
+    schedules_list = query.order_by(MaintenanceSchedule.next_maintenance_date).offset(offset).limit(page_size).all()
+    
+    # Convert to dict manually to avoid serialization issues
+    items = []
+    for schedule in schedules_list:
+        items.append({
+            "id": schedule.id,
+            "equipment_id": schedule.equipment_id,
+            "maintenance_type": schedule.maintenance_type,
+            "notes": schedule.notes,
+            "frequency_days": schedule.frequency_days,
+            "last_maintenance_date": schedule.last_maintenance_date.isoformat() if schedule.last_maintenance_date else None,
+            "next_maintenance_date": schedule.next_maintenance_date.isoformat() if schedule.next_maintenance_date else None,
+            "assigned_to_user_id": schedule.assigned_to_user_id,
+            "is_active": schedule.is_active,
+            "created_at": schedule.created_at.isoformat() if schedule.created_at else None,
+        })
+    
+    return {
+        "items": items,
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size
+    }
 
 
 @router.get("/{schedule_id}", response_model=MaintenanceScheduleOut)
@@ -80,7 +112,7 @@ def create_maintenance_schedule(
     current_user: User = Depends(get_current_user),
 ):
     """Create a new maintenance schedule (supervisor and super_admin only)"""
-    require_supervisor_or_above(current_user)
+    require_manager_or_above(current_user)
     
     # Verify equipment exists
     equipment = db.query(Equipment).filter(Equipment.id == payload.equipment_id).first()
@@ -115,7 +147,7 @@ def update_maintenance_schedule(
     current_user: User = Depends(get_current_user),
 ):
     """Update a maintenance schedule (supervisor and super_admin only)"""
-    require_supervisor_or_above(current_user)
+    require_manager_or_above(current_user)
     
     schedule = db.query(MaintenanceSchedule).filter(MaintenanceSchedule.id == schedule_id).first()
     if not schedule:
@@ -147,7 +179,7 @@ def complete_maintenance(
     Mark maintenance as completed and calculate next maintenance date.
     Updates last_maintenance_date to now and calculates next_maintenance_date based on frequency.
     """
-    require_supervisor_or_above(current_user)
+    require_manager_or_above(current_user)
     
     schedule = db.query(MaintenanceSchedule).filter(MaintenanceSchedule.id == schedule_id).first()
     if not schedule:
@@ -159,6 +191,10 @@ def complete_maintenance(
     
     db.commit()
     db.refresh(schedule)
+    
+    # Send notifications to supervisors
+    notification_service.notify_maintenance_completed(db, schedule, current_user)
+    
     return schedule
 
 
@@ -169,7 +205,7 @@ def delete_maintenance_schedule(
     current_user: User = Depends(get_current_user),
 ):
     """Delete a maintenance schedule (supervisor and super_admin only)"""
-    require_supervisor_or_above(current_user)
+    require_manager_or_above(current_user)
     
     schedule = db.query(MaintenanceSchedule).filter(MaintenanceSchedule.id == schedule_id).first()
     if not schedule:

@@ -14,6 +14,8 @@ import { UsersPage } from "./pages/UsersPage";
 import { UserProfilePage } from "./pages/UserProfilePage";
 import { ViewerLandingPage } from "./pages/ViewerLandingPage";
 import { MaintenancePage } from "./pages/MaintenancePage";
+import { ReportsPage } from "./pages/ReportsPage";
+import { NotificationsPage } from "./pages/NotificationsPage";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const auth = useAuth();
@@ -104,6 +106,22 @@ export default function App() {
         element={
           <RequireAuth>
             {auth.user?.role === "viewer" ? <Navigate to="/" replace /> : <MaintenancePage />}
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/reports"
+        element={
+          <RequireAuth>
+            {auth.user?.role === "viewer" || auth.user?.role === "tech" ? <Navigate to="/" replace /> : <ReportsPage />}
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/notifications"
+        element={
+          <RequireAuth>
+            <NotificationsPage />
           </RequireAuth>
         }
       />

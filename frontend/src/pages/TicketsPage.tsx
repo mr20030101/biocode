@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Navigation } from "../components/Navigation";
+import { Pagination } from "../components/Pagination";
 import { apiFetch } from "../lib/api";
 
 type Ticket = {
@@ -19,6 +20,14 @@ type Equipment = {
   device_name: string;
 };
 
+type PaginatedResponse = {
+  items: Ticket[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+};
+
 export function TicketsPage() {
   const nav = useNavigate();
   const [searchParams] = useSearchParams();
@@ -32,6 +41,12 @@ export function TicketsPage() {
   const [equipmentId, setEquipmentId] = useState("");
   const [priority, setPriority] = useState("medium");
   const [submitting, setSubmitting] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize] = useState(20);
   
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
@@ -48,12 +63,16 @@ export function TicketsPage() {
       if (filterStatus) params.append("status", filterStatus);
       if (filterPriority) params.append("priority", filterPriority);
       if (searchQuery) params.append("search", searchQuery);
+      params.append("page", currentPage.toString());
+      params.append("page_size", pageSize.toString());
       
       const queryString = params.toString();
-      const url = `/tickets/${queryString ? `?${queryString}` : ""}`;
+      const url = `/tickets/?${queryString}`;
       
-      const data = await apiFetch<Ticket[]>(url);
-      setTickets(data);
+      const data = await apiFetch<PaginatedResponse>(url);
+      setTickets(data.items);
+      setTotalPages(data.total_pages);
+      setTotalItems(data.total);
       setError(null);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load tickets");
@@ -64,7 +83,9 @@ export function TicketsPage() {
 
   const loadEquipment = async () => {
     try {
-      const data = await apiFetch<Equipment[]>("/equipment/");
+      const response = await apiFetch<any>("/equipment/");
+      // Handle both paginated and non-paginated responses
+      const data = response.items || response;
       setEquipment(data);
     } catch (e: any) {
       console.error("Failed to load equipment:", e);
@@ -82,8 +103,13 @@ export function TicketsPage() {
   }, []);
 
   useEffect(() => {
+    setCurrentPage(1); // Reset to page 1 when filters change
     loadTickets();
   }, [filterStatus, filterPriority, searchQuery]);
+
+  useEffect(() => {
+    loadTickets();
+  }, [currentPage]);
 
   const handleClearFilters = () => {
     setFilterStatus("");
@@ -390,6 +416,17 @@ export function TicketsPage() {
                 </div>
               )}
             </div>
+          )}
+          
+          {/* Pagination */}
+          {!loading && tickets.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={pageSize}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
       </div>

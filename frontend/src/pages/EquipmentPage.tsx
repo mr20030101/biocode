@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Navigation } from "../components/Navigation";
+import { Pagination } from "../components/Pagination";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -21,6 +22,14 @@ type Department = {
   code?: string | null;
 };
 
+type PaginatedResponse = {
+  items: Equipment[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+};
+
 export function EquipmentPage() {
   const auth = useAuth();
   const [items, setItems] = useState<Equipment[]>([]);
@@ -30,6 +39,12 @@ export function EquipmentPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editStatus, setEditStatus] = useState<string>("");
   const [updating, setUpdating] = useState(false);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [pageSize] = useState(20);
   
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
@@ -52,8 +67,13 @@ export function EquipmentPage() {
   }, []);
 
   useEffect(() => {
+    setCurrentPage(1); // Reset to page 1 when filters change
     loadEquipment();
   }, [filterStatus, filterDepartment, searchQuery]);
+
+  useEffect(() => {
+    loadEquipment();
+  }, [currentPage]);
 
   const loadDepartments = async () => {
     try {
@@ -73,12 +93,16 @@ export function EquipmentPage() {
       if (filterStatus) params.append("status", filterStatus);
       if (filterDepartment) params.append("department_id", filterDepartment);
       if (searchQuery) params.append("search", searchQuery);
+      params.append("page", currentPage.toString());
+      params.append("page_size", pageSize.toString());
       
       const queryString = params.toString();
-      const url = `/equipment/${queryString ? `?${queryString}` : ""}`;
+      const url = `/equipment/?${queryString}`;
       
-      const data = await apiFetch<Equipment[]>(url);
-      setItems(data);
+      const data = await apiFetch<PaginatedResponse>(url);
+      setItems(data.items);
+      setTotalPages(data.total_pages);
+      setTotalItems(data.total);
     } catch (e: any) {
       setError(e?.message ?? "Failed to load equipment");
     } finally {
@@ -90,6 +114,7 @@ export function EquipmentPage() {
     setFilterStatus("");
     setFilterDepartment("");
     setSearchQuery("");
+    setCurrentPage(1);
   };
 
   const handleEditStatus = (equipment: Equipment) => {
@@ -398,6 +423,17 @@ export function EquipmentPage() {
                 </div>
               )}
             </div>
+          )}
+          
+          {/* Pagination */}
+          {!loading && items.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={totalItems}
+              itemsPerPage={pageSize}
+              onPageChange={setCurrentPage}
+            />
           )}
         </div>
 

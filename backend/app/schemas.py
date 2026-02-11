@@ -14,7 +14,8 @@ class Token(BaseModel):
 class UserBase(BaseModel):
     email: EmailStr
     full_name: str
-    role: UserRole = UserRole.tech
+    role: UserRole = UserRole.support
+    support_type: Optional[str] = None
     department_id: Optional[str] = None
 
 
@@ -26,6 +27,7 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     full_name: Optional[str] = None
     role: Optional[UserRole] = None
+    support_type: Optional[str] = None
     is_active: Optional[bool] = None
     department_id: Optional[str] = None
 
@@ -167,6 +169,29 @@ class MaintenanceScheduleOut(MaintenanceScheduleBase):
     id: str
     created_at: datetime
     updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class NotificationBase(BaseModel):
+    title: str
+    message: str
+    notification_type: str
+    related_entity_type: Optional[str] = None
+    related_entity_id: Optional[str] = None
+
+
+class NotificationCreate(NotificationBase):
+    user_id: str
+
+
+class NotificationOut(NotificationBase):
+    id: str
+    user_id: str
+    is_read: bool
+    created_at: datetime
+    read_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True

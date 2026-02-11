@@ -42,9 +42,22 @@ class TimestampMixin:
 
 class UserRole(str, enum.Enum):
     super_admin = "super_admin"
-    supervisor = "supervisor"
-    tech = "tech"
-    viewer = "viewer"
+    manager = "manager"  # Handles multiple departments
+    department_head = "department_head"  # Single department
+    support = "support"  # Biomed Tech, Maintenance/Facility, IT Staff, House Keeping
+    department_incharge = "department_incharge"  # Secretary
+
+
+class SupportType(str, enum.Enum):
+    biomed_tech = "biomed_tech"
+    maintenance_aircon = "maintenance_aircon"
+    maintenance_plumber = "maintenance_plumber"
+    maintenance_carpenter = "maintenance_carpenter"
+    maintenance_painter = "maintenance_painter"
+    maintenance_electrician = "maintenance_electrician"
+    it_staff = "it_staff"
+    house_keeping = "house_keeping"
+    other = "other"
 
 
 class EquipmentStatus(str, enum.Enum):
@@ -75,7 +88,8 @@ class User(Base, TimestampMixin):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid_str)
     email: Mapped[str] = mapped_column(String(255), nullable=False, unique=True, index=True)
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False, default=UserRole.tech)
+    role: Mapped[UserRole] = mapped_column(Enum(UserRole), nullable=False, default=UserRole.support)
+    support_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # For support role
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     password_hash: Mapped[str] = mapped_column(String(255), nullable=False)
     department_id: Mapped[Optional[str]] = mapped_column(
@@ -196,6 +210,12 @@ class Equipment(Base, TimestampMixin):
     in_service_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     repair_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    
+    # Downtime tracking
+    total_downtime_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    last_downtime_start: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_currently_down: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    criticality: Mapped[str] = mapped_column(String(20), nullable=False, default="medium", index=True)  # low, medium, high, critical
 
     location: Mapped[Optional[Location]] = relationship(back_populates="equipment")
     department: Mapped[Optional[Department]] = relationship(back_populates="equipment")
@@ -323,4 +343,33 @@ class MaintenanceSchedule(Base, TimestampMixin):
 
     equipment: Mapped["Equipment"] = relationship()
     assigned_to_user: Mapped[Optional["User"]] = relationship()
+
+
+class Notification(Base):
+    """
+    User notifications for tickets, maintenance, equipment status changes, etc.
+    """
+
+    __tablename__ = "notifications"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid_str)
+    user_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+    notification_type: Mapped[str] = mapped_column(String(50), nullable=False, index=True)
+    related_entity_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    related_entity_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True
+    )
+    read_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    user: Mapped["User"] = relationship()
+
+    __table_args__ = (
+        Index("ix_notifications_user_read", "user_id", "is_read"),
+    )
 

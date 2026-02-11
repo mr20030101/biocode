@@ -36,11 +36,20 @@ type MaintenanceSchedule = {
   is_active: boolean;
 };
 
+type User = {
+  id: string;
+  full_name: string;
+  email: string;
+  role: string;
+  is_active: boolean;
+};
+
 type DepartmentDetails = {
   department: Department;
   equipment: Equipment[];
   tickets: Ticket[];
   maintenance_schedules: MaintenanceSchedule[];
+  users: User[];
   stats: {
     total_equipment: number;
     active_equipment: number;
@@ -48,6 +57,7 @@ type DepartmentDetails = {
     open_tickets: number;
     total_maintenance: number;
     overdue_maintenance: number;
+    total_users: number;
   };
 };
 
@@ -146,23 +156,34 @@ export function DepartmentsPage() {
 
     try {
       // Fetch all related data
-      const [equipmentData, ticketsData, maintenanceData] = await Promise.all([
-        apiFetch<Equipment[]>(`/equipment/?department_id=${dept.id}`),
-        apiFetch<Ticket[]>(`/tickets/?department_id=${dept.id}`),
-        apiFetch<MaintenanceSchedule[]>(`/maintenance/?department_id=${dept.id}`),
+      const [equipmentResponse, ticketsResponse, maintenanceResponse, usersResponse] = await Promise.all([
+        apiFetch<any>(`/equipment/?department_id=${dept.id}&page_size=1000`),
+        apiFetch<any>(`/tickets/?department_id=${dept.id}&page_size=1000`),
+        apiFetch<any>(`/maintenance/?department_id=${dept.id}&page_size=1000`),
+        apiFetch<any>(`/auth/users?page_size=1000`),
       ]);
+
+      // Extract items from paginated responses
+      const equipmentData = equipmentResponse.items || equipmentResponse;
+      const ticketsData = ticketsResponse.items || ticketsResponse;
+      const maintenanceData = maintenanceResponse.items || maintenanceResponse;
+      const allUsers = usersResponse.items || usersResponse;
+      
+      // Filter users by department
+      const usersData = allUsers.filter((u: User) => u.department_id === dept.id);
 
       // Calculate stats
       const now = new Date();
       const stats = {
         total_equipment: equipmentData.length,
-        active_equipment: equipmentData.filter(e => e.status === 'active').length,
+        active_equipment: equipmentData.filter((e: Equipment) => e.status === 'active').length,
         total_tickets: ticketsData.length,
-        open_tickets: ticketsData.filter(t => t.status === 'open' || t.status === 'in_progress').length,
-        total_maintenance: maintenanceData.filter(m => m.is_active).length,
+        open_tickets: ticketsData.filter((t: Ticket) => t.status === 'open' || t.status === 'in_progress').length,
+        total_maintenance: maintenanceData.filter((m: MaintenanceSchedule) => m.is_active).length,
         overdue_maintenance: maintenanceData.filter(
-          m => m.is_active && new Date(m.next_maintenance_date) < now
+          (m: MaintenanceSchedule) => m.is_active && new Date(m.next_maintenance_date) < now
         ).length,
+        total_users: usersData.length,
       };
 
       setDepartmentDetails({
@@ -170,6 +191,7 @@ export function DepartmentsPage() {
         equipment: equipmentData,
         tickets: ticketsData,
         maintenance_schedules: maintenanceData,
+        users: usersData,
         stats,
       });
     } catch (e: any) {
@@ -431,7 +453,7 @@ export function DepartmentsPage() {
                 ) : departmentDetails ? (
                   <div className="space-y-6">
                     {/* Statistics */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-4">
                       <div className="bg-blue-50 rounded-lg p-4">
                         <p className="text-sm text-blue-600 font-medium">Total Equipment</p>
                         <p className="text-2xl font-bold text-blue-900 mt-1">
@@ -466,6 +488,12 @@ export function DepartmentsPage() {
                         <p className="text-sm text-red-600 font-medium">Overdue</p>
                         <p className="text-2xl font-bold text-red-900 mt-1">
                           {departmentDetails.stats.overdue_maintenance}
+                        </p>
+                      </div>
+                      <div className="bg-cyan-50 rounded-lg p-4">
+                        <p className="text-sm text-cyan-600 font-medium">Users</p>
+                        <p className="text-2xl font-bold text-cyan-900 mt-1">
+                          {departmentDetails.stats.total_users}
                         </p>
                       </div>
                     </div>
@@ -546,6 +574,52 @@ export function DepartmentsPage() {
                         </div>
                       ) : (
                         <p className="text-gray-500 text-sm">No tickets for this department</p>
+                      )}
+                    </div>
+
+                    {/* Users Section */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <svg className="w-5 h-5 mr-2 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        Users ({departmentDetails.users.length})
+                      </h3>
+                      {departmentDetails.users.length > 0 ? (
+                        <div className="bg-gray-50 rounded-lg p-4 space-y-2 max-h-60 overflow-y-auto">
+                          {departmentDetails.users.map((user) => (
+                            <div key={user.id} className="flex items-center justify-between bg-white p-3 rounded border border-gray-200">
+                              <div className="flex items-center space-x-3">
+                                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-white font-semibold text-sm">
+                                    {user.full_name.charAt(0).toUpperCase()}
+                                  </span>
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-900">{user.full_name}</p>
+                                  <p className="text-sm text-gray-500">{user.email}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center space-x-2">
+                                <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                  user.role === 'super_admin' ? 'bg-purple-100 text-purple-700' :
+                                  user.role === 'supervisor' ? 'bg-blue-100 text-blue-700' :
+                                  user.role === 'tech' ? 'bg-green-100 text-green-700' :
+                                  'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {user.role.replace('_', ' ')}
+                                </span>
+                                <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                  user.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {user.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-sm">No users assigned to this department</p>
                       )}
                     </div>
 

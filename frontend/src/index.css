@@ -1,31 +1,37 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900;
+    @apply bg-gray-50 text-gray-900 font-['Outfit'] dark:bg-gray-950 dark:text-white;
+  }
+  
+  * {
+    font-family: 'Outfit', sans-serif;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply px-4 py-2.5 bg-brand-600 text-white rounded-lg font-medium hover:bg-brand-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-theme-xs;
   }
   
   .btn-secondary {
-    @apply px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors;
+    @apply px-4 py-2.5 bg-white text-gray-700 border border-gray-300 rounded-lg font-medium hover:bg-gray-50 transition-colors shadow-theme-xs dark:bg-gray-800 dark:text-gray-400 dark:border-gray-700 dark:hover:bg-white/[0.03];
   }
   
   .input-field {
-    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent;
+    @apply w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-3 focus:ring-brand-500/10 focus:border-brand-300 shadow-theme-xs dark:bg-gray-900 dark:border-gray-700 dark:text-white/90 dark:placeholder:text-white/30;
   }
   
   .card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
+    @apply bg-white rounded-xl shadow-theme-sm border border-gray-200 p-6 dark:bg-white/[0.03] dark:border-gray-800;
   }
   
   .stat-card {
-    @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow;
+    @apply bg-white rounded-xl shadow-theme-sm border border-gray-200 p-6 hover:shadow-theme-md transition-shadow dark:bg-white/[0.03] dark:border-gray-800;
   }
 }
