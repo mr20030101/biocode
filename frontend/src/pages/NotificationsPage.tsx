@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { Navigation } from "../components/Navigation";
+import { Layout } from "../components/Layout";
 import { Pagination } from "../components/Pagination";
 import { apiFetch } from "../lib/api";
+import { showError, showSuccess, showConfirm } from "../lib/notifications";
 
 type Notification = {
   id: string;
@@ -43,7 +44,7 @@ export function NotificationsPage() {
       setTotal(data.total);
       setTotalPages(data.total_pages);
     } catch (e: any) {
-      console.error("Failed to load notifications:", e);
+      showError('Failed to Load Notifications', e?.message ?? "Unable to load notifications. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -55,8 +56,8 @@ export function NotificationsPage() {
       setNotifications(notifications.map(n => 
         n.id === notificationId ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
       ));
-    } catch (e) {
-      console.error("Failed to mark as read:", e);
+    } catch (e: any) {
+      showError('Failed to Mark as Read', e?.message ?? "Unable to mark notification as read.");
     }
   };
 
@@ -64,20 +65,29 @@ export function NotificationsPage() {
     try {
       await apiFetch("/notifications/mark-all-read", { method: "POST" });
       setNotifications(notifications.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() })));
-    } catch (e) {
-      console.error("Failed to mark all as read:", e);
+      showSuccess('All Marked as Read!', 'All notifications have been marked as read');
+    } catch (e: any) {
+      showError('Failed to Mark All as Read', e?.message ?? "Unable to mark all notifications as read.");
     }
   };
 
   const deleteNotification = async (notificationId: string) => {
-    if (!confirm("Are you sure you want to delete this notification?")) return;
+    const result = await showConfirm(
+      'Delete Notification?',
+      'Are you sure you want to delete this notification? This action cannot be undone.',
+      'Yes, delete it',
+      'Cancel'
+    );
+    
+    if (!result.isConfirmed) return;
     
     try {
       await apiFetch(`/notifications/${notificationId}`, { method: "DELETE" });
       setNotifications(notifications.filter(n => n.id !== notificationId));
       setTotal(total - 1);
-    } catch (e) {
-      console.error("Failed to delete notification:", e);
+      showSuccess('Notification Deleted!', 'Notification has been deleted successfully');
+    } catch (e: any) {
+      showError('Failed to Delete Notification', e?.message ?? "Unable to delete notification.");
     }
   };
 
@@ -128,10 +138,8 @@ export function NotificationsPage() {
   const unreadCount = notifications.filter(n => !n.is_read).length;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <div className="page-content max-w-5xl mx-auto py-8">
+    <Layout>
+      <div className="mx-auto py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -271,6 +279,8 @@ export function NotificationsPage() {
                 <Pagination
                   currentPage={page}
                   totalPages={totalPages}
+                  totalItems={total}
+                  itemsPerPage={20}
                   onPageChange={setPage}
                 />
               </div>
@@ -278,6 +288,6 @@ export function NotificationsPage() {
           </>
         )}
       </div>
-    </div>
+    </Layout>
   );
 }

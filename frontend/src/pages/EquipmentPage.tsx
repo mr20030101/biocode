@@ -4,6 +4,7 @@ import { Layout } from "../components/Layout";
 import { Pagination } from "../components/Pagination";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
+import { showError, showSuccess } from "../lib/notifications";
 
 type Equipment = {
   id: string;
@@ -58,7 +59,6 @@ export function EquipmentPage() {
   const [departments, setDepartments] = useState<Department[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   
@@ -159,7 +159,7 @@ export function EquipmentPage() {
       setTotalPages(data.total_pages);
       setTotalItems(data.total);
     } catch (e: any) {
-      setError(e?.message ?? "Failed to load equipment");
+      showError('Failed to Load Equipment', e?.message ?? "Unable to load equipment. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -187,7 +187,6 @@ export function EquipmentPage() {
     if (!deletingEquipment) return;
 
     setDeleting(true);
-    setError(null);
 
     try {
       await apiFetch(`/equipment/${deletingEquipment.id}`, {
@@ -195,8 +194,9 @@ export function EquipmentPage() {
       });
       setShowDeleteModal(false);
       await loadEquipment();
+      showSuccess('Equipment Deleted!', 'Equipment has been deleted successfully');
     } catch (e: any) {
-      setError(e?.message ?? "Failed to delete equipment");
+      showError('Failed to Delete Equipment', e?.message ?? "Unable to delete equipment. Please try again.");
     } finally {
       setDeleting(false);
     }
@@ -217,7 +217,6 @@ export function EquipmentPage() {
     if (!quickEditEquipment) return;
 
     setUpdating(true);
-    setError(null);
 
     try {
       await apiFetch(`/equipment/${quickEditEquipment.id}`, {
@@ -228,8 +227,9 @@ export function EquipmentPage() {
       setShowQuickEditModal(false);
       setQuickEditEquipment(null);
       await loadEquipment();
+      showSuccess('Status Updated!', 'Equipment status has been updated successfully');
     } catch (e: any) {
-      setError(e?.message ?? "Failed to update status");
+      showError('Failed to Update Status', e?.message ?? "Unable to update equipment status. Please try again.");
     } finally {
       setUpdating(false);
     }
@@ -259,7 +259,6 @@ export function EquipmentPage() {
     if (!editingEquipment) return;
 
     setUpdating(true);
-    setError(null);
 
     try {
       // Format dates properly
@@ -282,8 +281,9 @@ export function EquipmentPage() {
       setEditingEquipment(null);
       setEditForm({});
       await loadEquipment();
+      showSuccess('Equipment Updated!', 'Equipment has been updated successfully');
     } catch (e: any) {
-      setError(e?.message ?? "Failed to update equipment");
+      showError('Failed to Update Equipment', e?.message ?? "Unable to update equipment. Please try again.");
     } finally {
       setUpdating(false);
     }
@@ -442,19 +442,6 @@ export function EquipmentPage() {
                 </button>
               </div>
             )}
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-6 flex items-start">
-            <svg className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
-            </div>
           </div>
         )}
 
@@ -909,12 +896,6 @@ export function EquipmentPage() {
                 </select>
               </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-                  {error}
-                </div>
-              )}
-
               <div className="flex space-x-3">
                 <button
                   onClick={handleSaveQuickEdit}
@@ -927,7 +908,6 @@ export function EquipmentPage() {
                   onClick={() => {
                     setShowQuickEditModal(false);
                     setQuickEditEquipment(null);
-                    setError(null);
                   }}
                   disabled={updating}
                   className="btn-secondary flex-1"
@@ -1233,12 +1213,6 @@ export function EquipmentPage() {
                 </div>
               </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mt-4 text-sm">
-                  {error}
-                </div>
-              )}
-
               <div className="flex space-x-3 mt-6">
                 <button
                   onClick={handleSaveFullEdit}
@@ -1252,7 +1226,6 @@ export function EquipmentPage() {
                     setShowEditModal(false);
                     setEditingEquipment(null);
                     setEditForm({});
-                    setError(null);
                   }}
                   disabled={updating}
                   className="btn-secondary flex-1"
@@ -1298,12 +1271,6 @@ export function EquipmentPage() {
                 This action cannot be undone. All related tickets and history will be affected.
               </p>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-                  {error}
-                </div>
-              )}
-
               <div className="flex space-x-3">
                 <button
                   onClick={handleConfirmDelete}
@@ -1315,7 +1282,6 @@ export function EquipmentPage() {
                 <button
                   onClick={() => {
                     setShowDeleteModal(false);
-                    setError(null);
                   }}
                   disabled={deleting}
                   className="btn-secondary flex-1"

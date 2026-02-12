@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { Layout } from "../components/Layout";
 import { Pagination } from "../components/Pagination";
 import { apiFetch } from "../lib/api";
+import { showError, showSuccess } from "../lib/notifications";
 
 type Ticket = {
   id: string;
@@ -29,12 +30,10 @@ type PaginatedResponse = {
 };
 
 export function TicketsPage() {
-  const nav = useNavigate();
   const [searchParams] = useSearchParams();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -94,9 +93,8 @@ export function TicketsPage() {
       setTickets(data.items);
       setTotalPages(data.total_pages);
       setTotalItems(data.total);
-      setError(null);
     } catch (e: any) {
-      setError(e?.message ?? "Failed to load tickets");
+      showError('Failed to Load Tickets', e?.message ?? "Unable to load tickets. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -163,7 +161,6 @@ export function TicketsPage() {
     if (!quickStatusTicket) return;
 
     setUpdating(true);
-    setError(null);
 
     try {
       await apiFetch(`/tickets/${quickStatusTicket.id}`, {
@@ -177,8 +174,9 @@ export function TicketsPage() {
       setShowQuickStatusModal(false);
       setQuickStatusTicket(null);
       await loadTickets();
+      showSuccess('Status Updated!', 'Ticket status has been updated successfully');
     } catch (e: any) {
-      setError(e?.message ?? "Failed to update ticket status");
+      showError('Permission Denied', e?.message ?? "You don't have permission to update this ticket status");
     } finally {
       setUpdating(false);
     }
@@ -188,7 +186,6 @@ export function TicketsPage() {
     if (!editingTicket) return;
 
     setUpdating(true);
-    setError(null);
 
     try {
       await apiFetch(`/tickets/${editingTicket.id}`, {
@@ -205,8 +202,9 @@ export function TicketsPage() {
       setShowEditModal(false);
       setEditingTicket(null);
       await loadTickets();
+      showSuccess('Ticket Updated!', 'Ticket has been updated successfully');
     } catch (e: any) {
-      setError(e?.message ?? "Failed to update ticket");
+      showError('Permission Denied', e?.message ?? "You don't have permission to update this ticket");
     } finally {
       setUpdating(false);
     }
@@ -220,7 +218,6 @@ export function TicketsPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    setError(null);
 
     try {
       await apiFetch("/tickets/", {
@@ -239,8 +236,9 @@ export function TicketsPage() {
       setPriority("medium");
       setShowForm(false);
       await loadTickets();
+      showSuccess('Ticket Created!', 'Service ticket has been created successfully');
     } catch (e: any) {
-      setError(e?.message ?? "Failed to create ticket");
+      showError('Failed to Create Ticket', e?.message ?? "Unable to create ticket. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -475,12 +473,6 @@ export function TicketsPage() {
                 </select>
               </div>
 
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                  {error}
-                </div>
-              )}
-
               <div className="flex space-x-3">
                 <button type="submit" disabled={submitting} className="btn-primary">
                   {submitting ? "Creating..." : "Create Ticket"}
@@ -498,18 +490,6 @@ export function TicketsPage() {
         )}
 
         {/* Tickets List */}
-        {error && !showForm && (
-          <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg mb-6 flex items-start">
-            <svg className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-            </svg>
-            <div>
-              <h3 className="text-sm font-medium text-red-800">Error</h3>
-              <p className="text-sm text-red-700 mt-1">{error}</p>
-            </div>
-          </div>
-        )}
-
         {loading ? (
           <div className="text-center py-12 text-gray-500">Loading...</div>
         ) : tickets.length === 0 ? (
@@ -1007,7 +987,6 @@ export function TicketsPage() {
                   onClick={() => {
                     setShowQuickStatusModal(false);
                     setQuickStatusTicket(null);
-                    setError(null);
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -1077,19 +1056,6 @@ export function TicketsPage() {
                     </span>
                   </div>
                 </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg flex items-start">
-                    <svg className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <h3 className="text-sm font-medium text-red-800">Error</h3>
-                      <p className="text-sm text-red-700 mt-1">{error}</p>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Modal Footer */}
@@ -1098,7 +1064,6 @@ export function TicketsPage() {
                   onClick={() => {
                     setShowQuickStatusModal(false);
                     setQuickStatusTicket(null);
-                    setError(null);
                   }}
                   disabled={updating}
                   className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
@@ -1153,7 +1118,6 @@ export function TicketsPage() {
                   onClick={() => {
                     setShowEditModal(false);
                     setEditingTicket(null);
-                    setError(null);
                   }}
                   className="text-gray-400 hover:text-gray-600 transition-colors"
                 >
@@ -1238,19 +1202,6 @@ export function TicketsPage() {
                     </select>
                   </div>
                 </div>
-
-                {/* Error Message */}
-                {error && (
-                  <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg flex items-start">
-                    <svg className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                    </svg>
-                    <div>
-                      <h3 className="text-sm font-medium text-red-800">Error</h3>
-                      <p className="text-sm text-red-700 mt-1">{error}</p>
-                    </div>
-                  </div>
-                )}
               </div>
 
               {/* Modal Footer */}
@@ -1259,7 +1210,6 @@ export function TicketsPage() {
                   onClick={() => {
                     setShowEditModal(false);
                     setEditingTicket(null);
-                    setError(null);
                   }}
                   disabled={updating}
                   className="px-4 py-2 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium disabled:opacity-50"
