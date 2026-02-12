@@ -3,6 +3,7 @@ import { Layout } from "../components/Layout";
 import { Pagination } from "../components/Pagination";
 import { apiFetch } from "../lib/api";
 import { showError, showSuccess, showConfirm } from "../lib/notifications";
+import { useNotifications } from "../lib/notificationContext";
 
 type Notification = {
   id: string;
@@ -17,6 +18,7 @@ type Notification = {
 };
 
 export function NotificationsPage() {
+  const { refreshUnreadCount, decrementUnreadCount } = useNotifications();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -26,6 +28,9 @@ export function NotificationsPage() {
 
   useEffect(() => {
     loadNotifications();
+    // Auto-refresh notifications every 30 seconds
+    const interval = setInterval(loadNotifications, 30000);
+    return () => clearInterval(interval);
   }, [page, filter]);
 
   const loadNotifications = async () => {
@@ -56,6 +61,7 @@ export function NotificationsPage() {
       setNotifications(notifications.map(n => 
         n.id === notificationId ? { ...n, is_read: true, read_at: new Date().toISOString() } : n
       ));
+      decrementUnreadCount();
     } catch (e: any) {
       showError('Failed to Mark as Read', e?.message ?? "Unable to mark notification as read.");
     }
@@ -65,6 +71,7 @@ export function NotificationsPage() {
     try {
       await apiFetch("/notifications/mark-all-read", { method: "POST" });
       setNotifications(notifications.map(n => ({ ...n, is_read: true, read_at: new Date().toISOString() })));
+      await refreshUnreadCount();
       showSuccess('All Marked as Read!', 'All notifications have been marked as read');
     } catch (e: any) {
       showError('Failed to Mark All as Read', e?.message ?? "Unable to mark all notifications as read.");
@@ -85,6 +92,7 @@ export function NotificationsPage() {
       await apiFetch(`/notifications/${notificationId}`, { method: "DELETE" });
       setNotifications(notifications.filter(n => n.id !== notificationId));
       setTotal(total - 1);
+      await refreshUnreadCount();
       showSuccess('Notification Deleted!', 'Notification has been deleted successfully');
     } catch (e: any) {
       showError('Failed to Delete Notification', e?.message ?? "Unable to delete notification.");

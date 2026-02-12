@@ -16,12 +16,14 @@ import { ViewerLandingPage } from "./pages/ViewerLandingPage";
 import { MaintenancePage } from "./pages/MaintenancePage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { NotificationsPage } from "./pages/NotificationsPage";
+import { SettingsPage } from "./pages/SettingsPage";
 
 function RequireAuth({ children }: { children: React.ReactElement }) {
   const auth = useAuth();
   const location = useLocation();
   if (auth.loading) return <div className="container">Loading...</div>;
   if (!auth.user) return <Navigate to="/login" state={{ from: location }} replace />;
+  
   return children;
 }
 
@@ -122,6 +124,14 @@ export default function App() {
         element={
           <RequireAuth>
             <NotificationsPage />
+          </RequireAuth>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <RequireAuth>
+            <SettingsPage />
           </RequireAuth>
         }
       />

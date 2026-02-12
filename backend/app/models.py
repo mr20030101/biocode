@@ -95,6 +95,7 @@ class User(Base, TimestampMixin):
     department_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("departments.id", ondelete="SET NULL"), nullable=True, index=True
     )
+    preferences: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON string for user preferences
 
     department: Mapped[Optional["Department"]] = relationship()
     created_logs: Mapped[list["EquipmentLog"]] = relationship(

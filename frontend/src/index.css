@@ -35,3 +35,48 @@
     @apply bg-white rounded-xl shadow-theme-sm border border-gray-200 p-6 hover:shadow-theme-md transition-shadow dark:bg-white/[0.03] dark:border-gray-800;
   }
 }
+
+/* SweetAlert2 Custom Styles */
+.swal2-popup {
+  font-family: 'Outfit', sans-serif !important;
+}
+
+.swal2-actions {
+  display: flex !important;
+  gap: 0.75rem !important;
+  margin-top: 1.5rem !important;
+}
+
+.swal2-confirm-custom,
+.swal2-cancel-custom {
+  padding: 0.625rem 1.25rem !important;
+  border-radius: 0.5rem !important;
+  font-weight: 500 !important;
+  font-size: 0.875rem !important;
+  border: none !important;
+  cursor: pointer !important;
+  transition: all 0.2s !important;
+}
+
+.swal2-confirm-custom {
+  background-color: #3B82F6 !important;
+  color: white !important;
+}
+
+.swal2-confirm-custom:hover {
+  background-color: #2563EB !important;
+}
+
+.swal2-cancel-custom {
+  background-color: #6B7280 !important;
+  color: white !important;
+}
+
+.swal2-cancel-custom:hover {
+  background-color: #4B5563 !important;
+}
+
+.swal2-styled:focus {
+  box-shadow: none !important;
+}
+

@@ -57,6 +57,12 @@ export const showConfirm = (title: string, message?: string, confirmText = 'Yes'
     cancelButtonColor: '#6B7280',
     confirmButtonText: confirmText,
     cancelButtonText: cancelText,
+    reverseButtons: true,
+    focusConfirm: false,
+    customClass: {
+      confirmButton: 'swal2-confirm-custom',
+      cancelButton: 'swal2-cancel-custom',
+    },
   });
 };
 

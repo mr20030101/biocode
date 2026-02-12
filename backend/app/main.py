@@ -10,6 +10,7 @@ from .routers_maintenance import router as maintenance_router
 from .routers_analytics import router as analytics_router
 from .routers_reports import router as reports_router
 from .routers_notifications import router as notifications_router
+from .routers_user_preferences import router as user_preferences_router
 
 
 app = FastAPI(title="Biocode Biomedical Equipment API")
@@ -37,6 +38,7 @@ app.include_router(maintenance_router)
 app.include_router(analytics_router)
 app.include_router(reports_router)
 app.include_router(notifications_router)
+app.include_router(user_preferences_router)
 
 
 @app.get("/health")

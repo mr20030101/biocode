@@ -79,8 +79,20 @@ export function EquipmentPage() {
   const [filterDepartment, setFilterDepartment] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
   
-  // View mode state
-  const [viewMode, setViewMode] = useState<"table" | "horizontal" | "grid">("horizontal");
+  // View mode state - load from user preferences
+  const [viewMode, setViewMode] = useState<"table" | "horizontal" | "grid">(() => {
+    // Try to load from user preferences in localStorage
+    const savedPrefs = localStorage.getItem("userPreferences");
+    if (savedPrefs) {
+      try {
+        const prefs = JSON.parse(savedPrefs);
+        return prefs.default_view_mode || "horizontal";
+      } catch {
+        return "horizontal";
+      }
+    }
+    return "horizontal";
+  });
   
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);

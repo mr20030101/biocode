@@ -8,7 +8,7 @@ export function ViewerLandingPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto py-8">
+      <div className="mx-auto py-8">
         {/* Welcome Section */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl mb-6">

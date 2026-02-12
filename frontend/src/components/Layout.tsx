@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import { NotificationBell } from "./NotificationBell";
@@ -10,7 +10,28 @@ type LayoutProps = {
 export function Layout({ children }: LayoutProps) {
   const auth = useAuth();
   const location = useLocation();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Load initial state from localStorage
+    const saved = localStorage.getItem("sidebarCollapsed");
+    return saved === "true";
+  });
+
+  useEffect(() => {
+    // Listen for preference changes from settings page
+    const handlePreferenceChange = () => {
+      const saved = localStorage.getItem("sidebarCollapsed");
+      setIsCollapsed(saved === "true");
+    };
+
+    window.addEventListener("sidebarPreferenceChanged", handlePreferenceChange);
+    return () => window.removeEventListener("sidebarPreferenceChanged", handlePreferenceChange);
+  }, []);
+
+  const toggleSidebar = () => {
+    const newState = !isCollapsed;
+    setIsCollapsed(newState);
+    localStorage.setItem("sidebarCollapsed", newState.toString());
+  };
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -109,6 +130,18 @@ export function Layout({ children }: LayoutProps) {
             {/* Divider */}
             <div className="h-8 w-px bg-gray-200"></div>
 
+            {/* Settings */}
+            <Link
+              to="/settings"
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Settings"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </Link>
+
             {/* User Avatar */}
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold shadow-md flex-shrink-0">
               {auth.user?.full_name?.charAt(0).toUpperCase()}
@@ -188,7 +221,7 @@ export function Layout({ children }: LayoutProps) {
           {/* Collapse Toggle */}
           <div className="p-4 border-t border-white/20">
             <button
-              onClick={() => setIsCollapsed(!isCollapsed)}
+              onClick={toggleSidebar}
               className={`w-full px-3 py-2 text-sm font-medium text-gray-600 bg-white/50 rounded-lg hover:bg-white/70 transition-colors flex items-center justify-center ${isCollapsed ? "" : "space-x-2"}`}
               title={isCollapsed ? "Expand" : "Collapse"}
             >

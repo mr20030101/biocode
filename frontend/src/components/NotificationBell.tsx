@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { apiFetch } from "../lib/api";
 import { Link } from "react-router-dom";
+import { useNotifications } from "../lib/notificationContext";
 
 type Notification = {
   id: string;
@@ -15,32 +16,16 @@ type Notification = {
 };
 
 export function NotificationBell() {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadCount, decrementUnreadCount } = useNotifications();
   const [showDropdown, setShowDropdown] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    loadUnreadCount();
-    // Poll for new notifications every 30 seconds
-    const interval = setInterval(loadUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     if (showDropdown) {
       loadRecentNotifications();
     }
   }, [showDropdown]);
-
-  const loadUnreadCount = async () => {
-    try {
-      const data = await apiFetch<{ unread_count: number }>("/notifications/unread-count");
-      setUnreadCount(data.unread_count);
-    } catch (e) {
-      console.error("Failed to load unread count:", e);
-    }
-  };
 
   const loadRecentNotifications = async () => {
     setLoading(true);
@@ -60,7 +45,7 @@ export function NotificationBell() {
       setNotifications(notifications.map(n => 
         n.id === notificationId ? { ...n, is_read: true } : n
       ));
-      setUnreadCount(Math.max(0, unreadCount - 1));
+      decrementUnreadCount();
     } catch (e) {
       console.error("Failed to mark as read:", e);
     }
