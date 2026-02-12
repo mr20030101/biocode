@@ -367,18 +367,23 @@ python3 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# Option 1: Interactive setup script (Recommended)
+# Option 1: Python setup script (Works on all platforms - Recommended)
+python setup_database.py
+
+# Option 2: Bash script (macOS/Linux/Git Bash)
 ./setup_database.sh
 
-# Option 2: Manual setup
+# Option 3: Manual setup
 # Run migrations (creates all 12 tables)
-alembic upgrade head
+python -m alembic upgrade head
 # Seed sample data
 python seed_database.py
 
-# Option 3: Full reset (drops all tables, runs migrations, seeds data)
+# Option 4: Full reset (drops all tables, runs migrations, seeds data)
 python reset_database.py
 ```
+
+**Note**: Use `python` instead of `python3` on Windows.
 
 ### 4. Frontend Setup
 ```bash
@@ -1055,26 +1060,33 @@ mysql -u root -p -e "DROP DATABASE biocode_test;"
 **Solutions**:
 The seeding script now includes automatic checks and will show a helpful error message if migrations haven't been run. If you see this error:
 
-1. Run migrations first:
+1. Use the cross-platform Python setup script (Recommended):
+   ```bash
+   cd backend
+   python setup_database.py
+   # Choose option 1 for full reset
+   ```
+
+2. Or run migrations first:
    ```bash
    cd backend
    python -m alembic upgrade head
    python seed_database.py
    ```
 
-2. Or use the reset script (recommended):
+3. Or use the reset script:
    ```bash
    cd backend
    python reset_database.py
    ```
 
-3. Or use the interactive setup script:
+4. On macOS/Linux/Git Bash, use the bash script:
    ```bash
    cd backend
    ./setup_database.sh
    ```
 
-**Note**: The seeder now validates that all required tables exist before attempting to clear data, preventing cryptic database errors.
+**Note**: The seeder now validates that all required tables exist before attempting to clear data, preventing cryptic database errors. Works on Windows, macOS, and Linux.
 
 ### Port Already in Use
 **Problem**: Port 8000 or 5173 is already in use
