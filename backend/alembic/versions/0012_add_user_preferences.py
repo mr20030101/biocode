@@ -1,7 +1,7 @@
 """add user preferences
 
-Revision ID: 0002_add_user_preferences
-Revises: 0001_initial_complete_schema
+Revision ID: 0012_add_user_preferences
+Revises: 0011_create_notifications_table
 Create Date: 2026-02-12
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = '0002_add_user_preferences'
-down_revision = '0001_initial_complete_schema'
+revision = '0012_add_user_preferences'
+down_revision = '0011_create_notifications_table'
 branch_labels = None
 depends_on = None
 

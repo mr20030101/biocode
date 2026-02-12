@@ -2,61 +2,58 @@
 
 A comprehensive web application for managing biomedical equipment, service tickets, departments, and user roles in healthcare facilities.
 
-## Table of Contents
+## 📑 Table of Contents
 - [Features](#features)
 - [Technology Stack](#technology-stack)
-- [System Requirements](#system-requirements)
-- [Installation](#installation)
-- [Database Setup](#database-setup)
-- [Running the Application](#running-the-application)
-- [User Roles](#user-roles)
+- [Quick Setup](#quick-setup)
+- [Detailed Setup Guide](#detailed-setup-guide)
+- [Database Migrations](#database-migrations)
+- [User Roles & Permissions](#user-roles--permissions)
 - [Default Credentials](#default-credentials)
 - [Project Structure](#project-structure)
 - [API Documentation](#api-documentation)
+- [Deployment](#deployment)
+- [Testing](#testing)
+- [Troubleshooting](#troubleshooting)
 
-## Features
+---
+
+## ✨ Features
 
 ### Equipment Management
-- Track biomedical equipment inventory
+- Track biomedical equipment inventory with asset tags and serial numbers
 - Monitor equipment status (Active, Out of Service, Retired)
-- Record repair history and count
+- Record repair history and downtime tracking
 - Filter by status, department, and search
-- View detailed equipment information
-- Department assignment
-- **Scheduled maintenance tracking**
+- View detailed equipment information with maintenance logs
+- Department and location assignment
+- Scheduled maintenance tracking with automatic alerts
 
 ### Maintenance Schedules
-- **Create preventive maintenance schedules**
-- **Track calibration and inspection schedules**
-- **View overdue and upcoming maintenance**
-- **Assign maintenance to support staff**
-- **Automatic next maintenance date calculation**
-- **Maintenance statistics dashboard**
-- **Department-based filtering**
+- Create preventive maintenance schedules
+- Track calibration and inspection schedules
+- View overdue and upcoming maintenance
+- Assign maintenance to support staff
+- Automatic next maintenance date calculation
+- Maintenance statistics dashboard
+- Department-based filtering
 
 ### Notifications System
-- **Real-time notification bell with unread count**
-- **Automatic notifications for**:
+- Real-time notification bell with unread count (auto-refresh every 30 seconds)
+- Automatic notifications for:
   - Ticket created, assigned, or status changed
   - Equipment status changes
   - Maintenance completed
   - Overdue maintenance alerts
-- **Role-based notifications**:
-  - Managers notified of all major events
-  - Support staff notified of assignments
-  - Department staff notified of their tickets
-- **Notification management**:
-  - Mark as read/unread
-  - Delete notifications
-  - Filter by read status
-  - Pagination support
+- Role-based notifications
+- Mark as read/unread, delete, filter by status
+- Pagination support
 
 ### Reports Generation
-- **Excel report downloads**
-- **Equipment inventory reports** (with filters)
-- **Tickets reports** (with date ranges and filters)
-- **Maintenance schedules reports**
-- **Available to Managers and Super Admins only**
+- Excel report downloads (Equipment, Tickets, Maintenance)
+- Advanced filtering options
+- Date range selection
+- Available to Managers and Super Admins only
 
 ### Ticket Management
 - Create and manage service tickets
@@ -65,40 +62,51 @@ A comprehensive web application for managing biomedical equipment, service ticke
 - Priority levels (Low, Medium, High)
 - Link tickets to equipment
 - Filter and search tickets
+- Ticket responses with diagnosis and action taken
 
 ### Department Management
 - Create and manage departments
 - Assign equipment to departments
 - Department codes for organization
+- Track department statistics
 
 ### User Management
-- Role-based access control (Super Admin, Manager, Department Head, Support, Department Incharge)
+- Role-based access control (5 roles)
 - User creation and management
 - Activate/Deactivate users
 - Performance tracking for support staff
 - Department assignments
 - Support type classification (Biomed Tech, Maintenance, IT, House Keeping)
+- User preferences (view mode, sidebar state)
 
 ### Dashboard
-- **Role-specific dashboards with Chart.js visualizations**
-- **Support users see personal performance metrics**
-- **Managers and Department Heads see system-wide statistics**
-- **Interactive charts**:
-  - Line charts for performance trends
-  - Pie charts for status distribution
-  - Bar charts for equipment repairs by department
-- **Department Incharge users see special landing page**
+- Role-specific dashboards with Chart.js visualizations
+- Support users see personal performance metrics
+- Managers and Department Heads see system-wide statistics
+- Interactive charts (Line, Pie, Bar)
+- Department Incharge users see special landing page
 - Recent equipment and tickets overview
 
-## Technology Stack
+### UI/UX Features
+- Glassmorphic sidebar navigation (collapsible)
+- SweetAlert2 for all notifications and confirmations
+- Table, Card, and Grid view modes
+- User preferences saved to database and localStorage
+- Responsive design with Tailwind CSS
+- Dark mode support (coming soon)
+
+---
+
+## 🛠 Technology Stack
 
 ### Backend
-- **Framework**: FastAPI (Python)
-- **Database**: MySQL
+- **Framework**: FastAPI (Python 3.9+)
+- **Database**: MySQL 8.0+
 - **ORM**: SQLAlchemy
-- **Migrations**: Alembic
+- **Migrations**: Alembic (12 separate migration files, one per table)
 - **Authentication**: JWT tokens with OAuth2
 - **Password Hashing**: bcrypt
+- **Excel Reports**: openpyxl
 
 ### Frontend
 - **Framework**: React 18 with TypeScript
@@ -106,146 +114,239 @@ A comprehensive web application for managing biomedical equipment, service ticke
 - **Styling**: Tailwind CSS
 - **Build Tool**: Vite
 - **HTTP Client**: Fetch API
+- **Charts**: Chart.js
+- **Notifications**: SweetAlert2
 
-## System Requirements
+---
 
-- **Python**: 3.8 or higher
-- **Node.js**: 16 or higher
-- **MySQL**: 8.0 or higher
-- **npm**: 8 or higher
+## 🚀 Quick Setup
 
-## Installation
+### Prerequisites
+- Python 3.9+
+- Node.js 18+
+- MySQL 8.0+
+- Git
 
-### 1. Clone the Repository
+### 1. Clone Repository
 ```bash
-git clone <repository-url>
+git clone <your-repo-url>
 cd biocode
 ```
 
-### 2. Backend Setup
-
-#### Install Python Dependencies
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-#### Configure Environment Variables
-Create a `.env` file in the `backend` directory:
-```env
-DATABASE_URL=mysql+pymysql://root:@localhost/biocode
-SECRET_KEY=your-secret-key-here-change-in-production
-```
-
-### 3. Frontend Setup
-
-#### Install Node Dependencies
-```bash
-cd frontend
-npm install
-```
-
-#### Configure Environment Variables
-Create a `.env` file in the `frontend` directory:
-```env
-VITE_API_URL=http://127.0.0.1:8000
-```
-
-## Database Setup
-
-> **📖 For detailed database documentation, see [DATABASE_SETUP.md](backend/DATABASE_SETUP.md)**
-
-### Quick Setup (Recommended)
-
-The fastest way to set up the database is using the reset script:
-
-```bash
-cd backend
-python reset_database.py
-```
-
-This will:
-1. Drop all existing tables
-2. Run migrations to create schema
-3. Seed the database with sample data
-
-### Manual Setup
-
-#### 1. Create MySQL Database
+### 2. Database Setup
 ```bash
 mysql -u root -p
-```
-
-```sql
 CREATE DATABASE biocode CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 EXIT;
 ```
 
-#### 2. Run Migrations
+### 3. Backend Setup
 ```bash
 cd backend
-python -m alembic upgrade head
-```
+cp .env.example .env
+# Edit .env: DATABASE_URL=mysql+pymysql://root:@localhost:3306/biocode
 
-This creates all tables from the consolidated migration file:
-- users, departments, locations
-- equipment, tickets, equipment_logs
-- equipment_history, ticket_responses
-- maintenance_schedules, notifications
+python3 -m venv .venv
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
-#### 3. Seed Database
-```bash
-cd backend
+# Run migrations (creates all 12 tables)
+alembic upgrade head
+
+# Seed sample data
 python seed_database.py
 ```
 
-This creates:
-- 11 users:
-  - 1 Super Admin (Owner - no department)
-  - 1 Manager (IT Department)
-  - 5 Support Staff (IT Department with different specializations)
-  - 4 Department Incharge (assigned to ED, ICU, Radiology, Cardiology)
-- 9 departments (including IT Department)
-- 10 locations
-- 22 equipment items
-- 15 tickets
-- 29 equipment logs
-- 22 maintenance schedules
-- 47 notifications
-
-## Running the Application
-
-### Start Backend Server
+### 4. Frontend Setup
 ```bash
-cd backend
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uvicorn app.main:app --reload
+cd ../frontend
+cp .env.example .env
+npm install
 ```
 
-Backend will run on: `http://127.0.0.1:8000`
-API Documentation: `http://127.0.0.1:8000/docs`
-
-### Start Frontend Development Server
+### 5. Start Application
 ```bash
+# Terminal 1 - Backend
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+
+# Terminal 2 - Frontend
 cd frontend
 npm run dev
 ```
 
-Frontend will run on: `http://localhost:5173`
+### 6. Access Application
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
 
-### Access the Application
-Open your browser and navigate to: `http://localhost:5173`
+### 7. Login
+- Email: `admin@biocode.com`
+- Password: `admin123`
 
-## User Roles
+---
 
-### Super Admin
+## 📖 Detailed Setup Guide
+
+### Environment Configuration
+
+#### Backend (.env)
+```env
+DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/biocode
+SECRET_KEY=your-secret-key-here-change-in-production
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+```
+
+#### Frontend (.env)
+```env
+VITE_API_URL=http://localhost:8000
+```
+
+### Database Reset (Development)
+If you need to reset the database:
+```bash
+cd backend
+python reset_database.py
+alembic upgrade head
+python seed_database.py
+```
+
+### Production Build
+
+#### Backend
+```bash
+cd backend
+pip install gunicorn
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+```
+
+#### Frontend
+```bash
+cd frontend
+npm run build
+# Serve the dist/ folder with nginx, apache, or any static file server
+```
+
+---
+
+## 🗄 Database Migrations
+
+### Migration Structure
+The project uses **12 separate migration files** (one per table) for better organization:
+
+1. **0001_create_departments_table.py** - Departments table
+2. **0002_create_suppliers_table.py** - Suppliers table
+3. **0003_create_users_table.py** - Users table (depends on departments)
+4. **0004_create_locations_table.py** - Locations table
+5. **0005_create_equipment_table.py** - Equipment table (depends on locations, departments, suppliers)
+6. **0006_create_tickets_table.py** - Tickets table (depends on equipment, departments, users)
+7. **0007_create_equipment_logs_table.py** - Equipment logs table (depends on equipment, users)
+8. **0008_create_equipment_history_table.py** - Equipment history table (depends on tickets)
+9. **0009_create_ticket_responses_table.py** - Ticket responses table (depends on tickets, users)
+10. **0010_create_maintenance_schedules_table.py** - Maintenance schedules table (depends on equipment, users)
+11. **0011_create_notifications_table.py** - Notifications table (depends on users)
+12. **0012_add_user_preferences.py** - Adds preferences column to users table
+
+### Migration Commands
+```bash
+cd backend
+
+# Check current version
+alembic current
+
+# View migration history
+alembic history
+
+# Upgrade to latest version
+alembic upgrade head
+
+# Upgrade to specific version
+alembic upgrade 0005_create_equipment_table
+
+# Downgrade one version
+alembic downgrade -1
+
+# Downgrade to specific version
+alembic downgrade 0005_create_equipment_table
+
+# Downgrade all
+alembic downgrade base
+```
+
+### Migration Order & Dependencies
+```
+departments (0001)
+    ↓
+suppliers (0002)
+    ↓
+users (0003) ← depends on departments
+    ↓
+locations (0004)
+    ↓
+equipment (0005) ← depends on locations, departments, suppliers
+    ↓
+tickets (0006) ← depends on equipment, departments, users
+    ↓
+equipment_logs (0007) ← depends on equipment, users
+    ↓
+equipment_history (0008) ← depends on tickets
+    ↓
+ticket_responses (0009) ← depends on tickets, users
+    ↓
+maintenance_schedules (0010) ← depends on equipment, users
+    ↓
+notifications (0011) ← depends on users
+    ↓
+user_preferences (0012) ← modifies users table
+```
+
+### Creating New Migrations
+```bash
+cd backend
+
+# Create new migration
+alembic revision -m "description of changes"
+
+# Auto-generate migration from model changes
+alembic revision --autogenerate -m "description"
+
+# Apply new migration
+alembic upgrade head
+```
+
+### Setting Up on New Computer
+```bash
+# After cloning repository
+cd backend
+cp .env.example .env
+# Edit .env with your database credentials
+
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Create database
+mysql -u root -p -e "CREATE DATABASE biocode CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Run all migrations
+alembic upgrade head
+
+# Seed data
+python seed_database.py
+```
+
+---
+
+## 👥 User Roles & Permissions
+
+### Super Admin (Owner)
 - **Full system access**
 - Create/edit/delete users, equipment, departments
 - View all tickets and assign to support staff
 - Access user management and reports
 - Close tickets
+- No department assignment (system owner)
 
 ### Manager
 - **Handles multiple departments**
@@ -292,9 +393,11 @@ Open your browser and navigate to: `http://localhost:5173`
 - Cannot create departments or equipment
 - Special landing page with action buttons
 
-## Default Credentials
+---
 
-After running the seeder, you can log in with these accounts:
+## 🔑 Default Credentials
+
+After running `seed_database.py`, you can log in with these accounts:
 
 ### Super Admin (Owner)
 - **Email**: superadmin@biocode.com
@@ -309,100 +412,152 @@ After running the seeder, you can log in with these accounts:
 - **Role**: manager
 
 ### Support Staff (IT Department)
-- **Email**: support1@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Biomed Tech
-- **Email**: support2@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Electrician (Maintenance)
-- **Email**: support3@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Aircon Tech (Maintenance)
-- **Email**: support4@biocode.com / **Password**: support123 / **Department**: IT / **Type**: Plumber (Maintenance)
-- **Email**: support5@biocode.com / **Password**: support123 / **Department**: IT / **Type**: IT Staff
+- **Email**: support1@biocode.com / **Password**: support123 / **Type**: Biomed Tech
+- **Email**: support2@biocode.com / **Password**: support123 / **Type**: Electrician
+- **Email**: support3@biocode.com / **Password**: support123 / **Type**: Aircon Tech
+- **Email**: support4@biocode.com / **Password**: support123 / **Type**: Plumber
+- **Email**: support5@biocode.com / **Password**: support123 / **Type**: IT Staff
 
 ### Department Incharge (Department Staff)
-- **Email**: incharge1@biocode.com / **Password**: incharge123 / **Department**: Emergency Department
-- **Email**: incharge2@biocode.com / **Password**: incharge123 / **Department**: Intensive Care Unit
-- **Email**: incharge3@biocode.com / **Password**: incharge123 / **Department**: Radiology
-- **Email**: incharge4@biocode.com / **Password**: incharge123 / **Department**: Cardiology
+- **Email**: incharge1@biocode.com / **Password**: incharge123 / **Dept**: Emergency Department
+- **Email**: incharge2@biocode.com / **Password**: incharge123 / **Dept**: Intensive Care Unit
+- **Email**: incharge3@biocode.com / **Password**: incharge123 / **Dept**: Radiology
+- **Email**: incharge4@biocode.com / **Password**: incharge123 / **Dept**: Cardiology
 
-## Project Structure
+---
+
+## 📁 Project Structure
 
 ```
 biocode/
 ├── backend/
 │   ├── alembic/
-│   │   └── versions/          # Database migrations
+│   │   └── versions/          # 12 migration files (one per table)
+│   │       ├── 0001_create_departments_table.py
+│   │       ├── 0002_create_suppliers_table.py
+│   │       ├── ...
+│   │       ├── 0012_add_user_preferences.py
+│   │       ├── README.md
+│   │       └── MIGRATION_ORDER.md
 │   ├── app/
 │   │   ├── __init__.py
-│   │   ├── main.py           # FastAPI application
-│   │   ├── auth.py           # Authentication logic
-│   │   ├── config.py         # Configuration
-│   │   ├── database.py       # Database connection
-│   │   ├── models.py         # SQLAlchemy models
-│   │   ├── schemas.py        # Pydantic schemas
-│   │   ├── permissions.py    # Role-based permissions
-│   │   ├── routers_auth.py   # Auth endpoints
-│   │   ├── routers_departments.py
-│   │   ├── routers_equipment.py
-│   │   └── routers_tickets.py
-│   ├── .env                  # Environment variables
-│   ├── alembic.ini          # Alembic configuration
-│   ├── requirements.txt     # Python dependencies
-│   └── seed_database.py     # Database seeder
+│   │   ├── main.py                    # FastAPI application
+│   │   ├── auth.py                    # Authentication logic
+│   │   ├── config.py                  # Configuration
+│   │   ├── database.py                # Database connection
+│   │   ├── models.py                  # SQLAlchemy models
+│   │   ├── schemas.py                 # Pydantic schemas
+│   │   ├── permissions.py             # Role-based permissions
+│   │   ├── notification_service.py    # Notification logic
+│   │   ├── routers_auth.py            # Auth endpoints
+│   │   ├── routers_departments.py     # Department endpoints
+│   │   ├── routers_equipment.py       # Equipment endpoints
+│   │   ├── routers_tickets.py         # Ticket endpoints
+│   │   ├── routers_maintenance.py     # Maintenance endpoints
+│   │   ├── routers_notifications.py   # Notification endpoints
+│   │   ├── routers_analytics.py       # Analytics endpoints
+│   │   ├── routers_reports.py         # Report endpoints
+│   │   ├── routers_suppliers.py       # Supplier endpoints
+│   │   └── routers_user_preferences.py # User preferences endpoints
+│   ├── .env                           # Environment variables
+│   ├── .env.example                   # Environment template
+│   ├── alembic.ini                    # Alembic configuration
+│   ├── requirements.txt               # Python dependencies
+│   ├── seed_database.py               # Database seeder
+│   ├── reset_database.py              # Database reset script
+│   ├── DATABASE_SETUP.md              # Database documentation
+│   ├── MIGRATION_GUIDE.md             # Migration guide
+│   └── TEST_MIGRATIONS.md             # Migration testing guide
 │
 └── frontend/
     ├── src/
     │   ├── components/
-    │   │   └── Navigation.tsx
+    │   │   ├── Layout.tsx             # Main layout with sidebar
+    │   │   ├── Navigation.tsx         # Glassmorphic sidebar
+    │   │   ├── NotificationBell.tsx   # Notification bell component
+    │   │   └── Pagination.tsx         # Pagination component
     │   ├── lib/
-    │   │   ├── api.ts        # API client
-    │   │   └── auth.tsx      # Auth context
+    │   │   ├── api.ts                 # API client
+    │   │   ├── auth.tsx               # Auth context
+    │   │   ├── notifications.ts       # SweetAlert2 utilities
+    │   │   └── notificationContext.tsx # Notification state management
     │   ├── pages/
-    │   │   ├── DashboardPage.tsx
-    │   │   ├── EquipmentPage.tsx
-    │   │   ├── NewEquipmentPage.tsx
-    │   │   ├── TicketsPage.tsx
-    │   │   ├── TicketDetailPage.tsx
-    │   │   ├── DepartmentsPage.tsx
-    │   │   ├── UsersPage.tsx
-    │   │   ├── UserProfilePage.tsx
-    │   │   ├── LoginPage.tsx
-    │   │   └── RegisterPage.tsx
-    │   ├── App.tsx
-    │   ├── main.tsx
-    │   └── index.css
-    ├── .env                  # Environment variables
-    ├── package.json
-    ├── tailwind.config.js
-    └── vite.config.ts
+    │   │   ├── DashboardPage.tsx      # Role-specific dashboard
+    │   │   ├── EquipmentPage.tsx      # Equipment management
+    │   │   ├── NewEquipmentPage.tsx   # Create equipment
+    │   │   ├── TicketsPage.tsx        # Ticket management
+    │   │   ├── TicketDetailPage.tsx   # Ticket details
+    │   │   ├── DepartmentsPage.tsx    # Department management
+    │   │   ├── MaintenancePage.tsx    # Maintenance schedules
+    │   │   ├── NotificationsPage.tsx  # Notifications
+    │   │   ├── ReportsPage.tsx        # Reports generation
+    │   │   ├── SettingsPage.tsx       # User preferences
+    │   │   ├── UsersPage.tsx          # User management
+    │   │   ├── UserProfilePage.tsx    # User profile
+    │   │   ├── ViewerLandingPage.tsx  # Department Incharge landing
+    │   │   ├── LoginPage.tsx          # Login
+    │   │   └── RegisterPage.tsx       # Registration
+    │   ├── App.tsx                    # Main app component
+    │   ├── main.tsx                   # Entry point
+    │   └── index.css                  # Global styles + SweetAlert2 custom CSS
+    ├── .env                           # Environment variables
+    ├── .env.example                   # Environment template
+    ├── package.json                   # Node dependencies
+    ├── tailwind.config.js             # Tailwind configuration
+    ├── vite.config.ts                 # Vite configuration
+    └── README.md                      # Frontend documentation
+│
+├── README.md                          # This file (comprehensive documentation)
+├── QUICKSTART.md                      # Quick start guide
+├── DEPLOYMENT_GUIDE.md                # Deployment instructions
+├── SETUP_NEW_COMPUTER.md              # Setup on new computer
+├── MIGRATION_CONSOLIDATION_SUMMARY.md # Migration restructure details
+├── SETUP_SUMMARY.md                   # Setup summary
+├── MIGRATION_CHECKLIST.md             # Migration checklist
+├── start.sh                           # Start both servers
+└── stop.sh                            # Stop both servers
 ```
 
-## API Documentation
+---
+
+## 🔌 API Documentation
 
 ### Authentication Endpoints
 - `POST /auth/register` - Register new user
-- `POST /auth/login` - Login and get token
-- `GET /auth/me` - Get current user
-- `GET /auth/users` - List users
+- `POST /auth/login` - Login and get JWT token
+- `GET /auth/me` - Get current user info
+- `GET /auth/users` - List all users (Admin/Manager only)
+- `GET /auth/users/{id}` - Get user details
 - `GET /auth/users/{id}/stats` - Get user statistics
 - `PATCH /auth/users/{id}` - Update user
 - `DELETE /auth/users/{id}` - Delete user
 
 ### Equipment Endpoints
-- `GET /equipment/` - List equipment (with filters)
+- `GET /equipment/` - List equipment (with filters: status, department, search)
 - `GET /equipment/{id}` - Get equipment details
 - `POST /equipment/` - Create equipment
 - `PATCH /equipment/{id}` - Update equipment status
 - `DELETE /equipment/{id}` - Delete equipment
 
 ### Ticket Endpoints
-- `GET /tickets/` - List tickets (with filters)
+- `GET /tickets/` - List tickets (with filters: status, priority, assigned_to, department)
 - `GET /tickets/{id}` - Get ticket details
 - `POST /tickets/` - Create ticket
-- `PATCH /tickets/{id}` - Update ticket
+- `PATCH /tickets/{id}` - Update ticket status
 - `DELETE /tickets/{id}` - Delete ticket
 
 ### Department Endpoints
-- `GET /departments/` - List departments
+- `GET /departments/` - List all departments
 - `GET /departments/{id}` - Get department details
 - `POST /departments/` - Create department
 - `DELETE /departments/{id}` - Delete department
+
+### Supplier Endpoints
+- `GET /suppliers/` - List all suppliers
+- `GET /suppliers/{id}` - Get supplier details
+- `POST /suppliers/` - Create supplier
+- `PATCH /suppliers/{id}` - Update supplier
+- `DELETE /suppliers/{id}` - Delete supplier
 
 ### Maintenance Endpoints
 - `GET /maintenance/` - List maintenance schedules (with filters)
@@ -430,17 +585,463 @@ biocode/
 - `GET /analytics/departments/repairs` - Repairs by department
 
 ### Reports Endpoints
-- `GET /reports/equipment/excel` - Download equipment report
-- `GET /reports/tickets/excel` - Download tickets report
-- `GET /reports/maintenance/excel` - Download maintenance report
+- `GET /reports/equipment/excel` - Download equipment report (Excel)
+- `GET /reports/tickets/excel` - Download tickets report (Excel)
+- `GET /reports/maintenance/excel` - Download maintenance report (Excel)
 
-## Key Features by Role
+### User Preferences Endpoints
+- `GET /user-preferences/` - Get current user preferences
+- `PUT /user-preferences/` - Update user preferences
+
+### Interactive API Documentation
+Visit `http://localhost:8000/docs` for Swagger UI with interactive API testing.
+
+---
+
+## 🚢 Deployment
+
+### Production Checklist
+- [ ] Change `SECRET_KEY` in backend/.env to a strong random value
+- [ ] Use strong database passwords
+- [ ] Enable HTTPS (SSL/TLS certificates)
+- [ ] Set secure CORS origins in backend/app/main.py
+- [ ] Use environment-specific .env files
+- [ ] Enable rate limiting
+- [ ] Set up proper logging and monitoring
+- [ ] Regular database backups
+- [ ] Update dependencies regularly
+- [ ] Use production WSGI server (gunicorn)
+- [ ] Serve frontend with nginx or apache
+- [ ] Set up firewall rules
+- [ ] Configure database connection pooling
+
+### Backend Deployment
+```bash
+cd backend
+
+# Install production dependencies
+pip install gunicorn
+
+# Run with gunicorn (4 workers)
+gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+
+# Or use systemd service
+sudo nano /etc/systemd/system/biocode-backend.service
+```
+
+Example systemd service:
+```ini
+[Unit]
+Description=Biocode Backend
+After=network.target
+
+[Service]
+User=www-data
+WorkingDirectory=/var/www/biocode/backend
+Environment="PATH=/var/www/biocode/backend/.venv/bin"
+ExecStart=/var/www/biocode/backend/.venv/bin/gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000
+
+[Install]
+WantedBy=multi-user.target
+```
+
+### Frontend Deployment
+```bash
+cd frontend
+
+# Build for production
+npm run build
+
+# The dist/ folder contains the production build
+# Serve with nginx
+```
+
+Example nginx configuration:
+```nginx
+server {
+    listen 80;
+    server_name biocode.example.com;
+
+    # Frontend
+    location / {
+        root /var/www/biocode/frontend/dist;
+        try_files $uri $uri/ /index.html;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+}
+```
+
+### Database Backup
+```bash
+# Backup database
+mysqldump -u root -p biocode > backup_$(date +%Y%m%d_%H%M%S).sql
+
+# Restore database
+mysql -u root -p biocode < backup_20260212_120000.sql
+
+# Automated daily backups (crontab)
+0 2 * * * mysqldump -u root -pYOUR_PASSWORD biocode > /backups/biocode_$(date +\%Y\%m\%d).sql
+```
+
+---
+
+## 🧪 Testing
+
+### Backend Tests
+```bash
+cd backend
+source .venv/bin/activate
+
+# Run all tests
+pytest
+
+# Run with coverage
+pytest --cov=app
+
+# Run specific test file
+pytest tests/test_auth.py
+```
+
+### Frontend Tests
+```bash
+cd frontend
+
+# Run tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run in watch mode
+npm run test:watch
+```
+
+### Migration Testing
+```bash
+cd backend
+
+# Create test database
+mysql -u root -p -e "CREATE DATABASE biocode_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+# Update .env to use test database
+# DATABASE_URL=mysql+pymysql://root:@localhost:3306/biocode_test
+
+# Test migrations
+alembic upgrade head
+
+# Verify
+alembic current
+mysql -u root -p biocode_test -e "SHOW TABLES;"
+
+# Test rollback
+alembic downgrade -1
+alembic upgrade head
+
+# Cleanup
+mysql -u root -p -e "DROP DATABASE biocode_test;"
+```
+
+### Manual Testing Checklist
+- [ ] Login with all user roles
+- [ ] Create equipment
+- [ ] Create ticket
+- [ ] Assign ticket to support
+- [ ] Update ticket status
+- [ ] Close ticket (Manager/Admin only)
+- [ ] Create maintenance schedule
+- [ ] Mark maintenance as completed
+- [ ] Check notifications
+- [ ] Mark notifications as read
+- [ ] Generate reports (Excel download)
+- [ ] Update user preferences
+- [ ] Test sidebar collapse/expand
+- [ ] Test view mode switching (Table/Card/Grid)
+- [ ] Test pagination
+- [ ] Test search and filters
+- [ ] Test SweetAlert2 confirmations
+
+---
+
+## 🔧 Troubleshooting
+
+### Database Connection Issues
+**Problem**: Cannot connect to MySQL database
+
+**Solutions**:
+1. Check MySQL is running:
+   ```bash
+   mysql -u root -p
+   ```
+
+2. Verify database exists:
+   ```sql
+   SHOW DATABASES;
+   ```
+
+3. Check DATABASE_URL in `backend/.env`:
+   ```env
+   DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/biocode
+   ```
+
+4. Test connection:
+   ```bash
+   cd backend
+   python -c "from app.database import engine; print(engine.connect())"
+   ```
+
+### Migration Issues
+**Problem**: Migration errors or "Can't locate revision"
+
+**Solutions**:
+1. Check current version:
+   ```bash
+   cd backend
+   alembic current
+   ```
+
+2. View migration history:
+   ```bash
+   alembic history
+   ```
+
+3. Reset database (development only):
+   ```bash
+   python reset_database.py
+   alembic upgrade head
+   python seed_database.py
+   ```
+
+4. Manually set version (if needed):
+   ```bash
+   mysql -u root -p biocode
+   SELECT * FROM alembic_version;
+   UPDATE alembic_version SET version_num = '0012_add_user_preferences';
+   ```
+
+### Port Already in Use
+**Problem**: Port 8000 or 5173 is already in use
+
+**Solutions**:
+```bash
+# Backend on different port
+uvicorn app.main:app --reload --port 8001
+
+# Frontend on different port
+npm run dev -- --port 5174
+
+# Find and kill process using port
+# macOS/Linux:
+lsof -ti:8000 | xargs kill -9
+
+# Windows:
+netstat -ano | findstr :8000
+taskkill /PID <PID> /F
+```
+
+### Frontend Build Issues
+**Problem**: npm install or build errors
+
+**Solutions**:
+1. Clear node_modules and reinstall:
+   ```bash
+   cd frontend
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
+
+2. Clear cache:
+   ```bash
+   npm cache clean --force
+   npm install
+   ```
+
+3. Use specific Node version:
+   ```bash
+   nvm use 18
+   npm install
+   ```
+
+### CORS Issues
+**Problem**: CORS errors in browser console
+
+**Solutions**:
+1. Check VITE_API_URL in `frontend/.env`:
+   ```env
+   VITE_API_URL=http://localhost:8000
+   ```
+
+2. Verify CORS settings in `backend/app/main.py`:
+   ```python
+   app.add_middleware(
+       CORSMiddleware,
+       allow_origins=["http://localhost:5173"],
+       allow_credentials=True,
+       allow_methods=["*"],
+       allow_headers=["*"],
+   )
+   ```
+
+### Authentication Issues
+**Problem**: "Not authenticated" or token errors
+
+**Solutions**:
+1. Clear browser localStorage:
+   ```javascript
+   // In browser console
+   localStorage.clear()
+   ```
+
+2. Check token expiration in `backend/.env`:
+   ```env
+   ACCESS_TOKEN_EXPIRE_MINUTES=30
+   ```
+
+3. Verify SECRET_KEY is set in `backend/.env`
+
+### Notification Not Updating
+**Problem**: Notification count not updating automatically
+
+**Solutions**:
+1. Check NotificationProvider is wrapping the app in `frontend/src/main.tsx`
+2. Verify polling interval (default: 30 seconds)
+3. Check browser console for errors
+4. Verify backend notification endpoints are working
+
+### SweetAlert2 Buttons Not Showing
+**Problem**: Confirm/Cancel buttons not visible in modals
+
+**Solutions**:
+1. Check custom CSS in `frontend/src/index.css`
+2. Verify SweetAlert2 is installed:
+   ```bash
+   cd frontend
+   npm install sweetalert2
+   ```
+
+### Database Tables Missing
+**Problem**: Tables don't exist after migration
+
+**Solutions**:
+1. Verify migrations ran successfully:
+   ```bash
+   cd backend
+   alembic current
+   # Should show: 0012_add_user_preferences (head)
+   ```
+
+2. Check tables in database:
+   ```bash
+   mysql -u root -p biocode -e "SHOW TABLES;"
+   # Should show 12 tables
+   ```
+
+3. Re-run migrations:
+   ```bash
+   alembic upgrade head
+   ```
+
+---
+
+## 📊 Database Schema
+
+### Tables Overview
+The database consists of 12 tables (11 data tables + alembic_version):
+
+1. **departments** - Hospital departments
+2. **suppliers** - Equipment suppliers
+3. **users** - System users with roles
+4. **locations** - Physical locations for equipment
+5. **equipment** - Biomedical equipment inventory
+6. **tickets** - Service tickets
+7. **equipment_logs** - Service and maintenance logs
+8. **equipment_history** - Historical repair records
+9. **ticket_responses** - Service reports for completed tickets
+10. **maintenance_schedules** - Scheduled maintenance
+11. **notifications** - User notifications
+12. **alembic_version** - Migration tracking (managed by Alembic)
+
+### Key Tables
+
+#### users
+- id, email, full_name, password_hash
+- role (super_admin, manager, department_head, support, department_incharge)
+- support_type (biomed_tech, aircon_tech, plumber, carpenter, painter, electrician, it_staff, house_keeping, other)
+- department_id (FK to departments)
+- preferences (JSON: view mode, sidebar state)
+- is_active, created_at, updated_at
+
+#### equipment
+- id, asset_tag, serial_number, device_name
+- manufacturer, model, supplier_id (FK)
+- status (active, out_of_service, retired)
+- location_id (FK), department_id (FK)
+- repair_count, total_downtime_minutes
+- is_currently_down, last_downtime_start
+- criticality (low, medium, high, critical)
+- created_at, updated_at
+
+#### tickets
+- id, ticket_code, equipment_id (FK)
+- title, description, concern
+- status (open, in_progress, resolved, closed)
+- priority (low, medium, high)
+- reported_by_user_id (FK), assigned_to_user_id (FK)
+- department_id (FK)
+- completed_on, created_at, updated_at
+
+#### maintenance_schedules
+- id, equipment_id (FK)
+- maintenance_type, frequency_days
+- last_maintenance_date, next_maintenance_date
+- assigned_to_user_id (FK)
+- notes, is_active
+- created_at, updated_at
+
+#### notifications
+- id, user_id (FK)
+- title, message, notification_type
+- related_entity_type, related_entity_id
+- is_read, created_at, read_at
+
+### Foreign Key Relationships
+```
+departments ─┬─→ users ─┬─→ tickets ─┬─→ equipment_history
+             │          │            └─→ ticket_responses
+             │          ├─→ equipment_logs
+             │          ├─→ maintenance_schedules
+             │          └─→ notifications
+             └─→ equipment ─→ tickets
+
+suppliers ───→ equipment
+
+locations ───→ equipment
+```
+
+### Indexes
+- users: email, department_id
+- equipment: device_name, manufacturer+model, supplier_id, is_currently_down, criticality
+- tickets: ticket_code
+- equipment_logs: equipment_id, created_by_user_id, log_type, occurred_at
+- maintenance_schedules: equipment_id, next_maintenance_date
+- notifications: user_id, notification_type, is_read, created_at, user_id+is_read
+
+---
+
+## 🎯 Key Features by Role
 
 ### Super Admin Dashboard
 - User management with CRUD operations
 - Full access to all features
-- System-wide statistics with interactive charts
-- Generate all reports
+- System-wide statistics with interactive Chart.js visualizations
+- Generate all reports (Equipment, Tickets, Maintenance)
+- Manage departments and suppliers
+- Close tickets
 
 ### Manager Dashboard
 - Equipment and ticket management
@@ -450,6 +1051,7 @@ biocode/
 - Generate reports
 - System-wide statistics with charts
 - View repairs by department
+- Cannot manage users
 
 ### Department Head Dashboard
 - Department-specific equipment management
@@ -457,163 +1059,300 @@ biocode/
 - Update equipment status
 - Cannot close tickets
 - Department statistics
+- Limited to assigned department
 
 ### Support Dashboard
 - Personal performance metrics with trend charts
 - Assigned tickets only
-- Ticket status updates (except Close)
+- Ticket status updates (Open, In Progress, Resolved)
+- Cannot close tickets
 - Maintenance schedules assigned to them
 - Cannot access equipment or departments pages
+- Performance tracking (tickets resolved, avg resolution time)
 
 ### Department Incharge Dashboard
 - Special landing page with action buttons
-- Create new tickets
+- Create new tickets (with equipment dropdown)
 - **Can only view their own tickets**
 - **Equipment and Departments sections hidden**
 - Cannot modify ticket status to Resolved or Closed
+- Simplified interface for non-technical staff
 
-## Database Schema
+---
 
-### Users Table
-- id, email, full_name, password_hash
-- role (super_admin, manager, department_head, support, department_incharge)
-- support_type (for support role: biomed_tech, aircon_tech, plumber, carpenter, painter, electrician, it_staff, house_keeping)
-- department_id (foreign key to departments)
-- is_active
+## 🔐 Security Features
 
-### Equipment Table
-- id, asset_tag, device_name, manufacturer, model
-- serial_number, status, department_id
-- repair_count (auto-incremented on ticket resolution)
-- total_downtime_minutes, last_downtime_start, is_currently_down
-- criticality (low, medium, high, critical)
+### Authentication
+- JWT token-based authentication
+- OAuth2 password flow
+- Secure password hashing with bcrypt
+- Token expiration (configurable)
+- Protected routes with role-based access
 
-### Tickets Table
-- id, ticket_code, equipment_id, title, description
-- status (open, in_progress, resolved, closed)
-- priority (low, medium, high)
-- reported_by_user_id, assigned_to_user_id, department_id
-- created_at, updated_at
+### Authorization
+- Role-based access control (RBAC)
+- Permission checks on all endpoints
+- Department-based data isolation
+- User can only see their assigned data (Support, Department Incharge)
 
-### Maintenance Schedules Table
-- id, equipment_id, maintenance_type, frequency_days
-- last_maintenance_date, next_maintenance_date
-- assigned_to_user_id, notes, is_active
-- created_at, updated_at
+### Data Protection
+- SQL injection prevention (SQLAlchemy ORM)
+- XSS protection (React escaping)
+- CORS configuration
+- Environment variable for sensitive data
+- Password complexity requirements (coming soon)
 
-### Notifications Table
-- id, user_id, title, message
-- notification_type, related_entity_type, related_entity_id
-- is_read, created_at, read_at
+### Best Practices
+- Never commit .env files
+- Use strong SECRET_KEY in production
+- Regular security updates
+- Database backups
+- HTTPS in production
+- Rate limiting (coming soon)
 
-### Departments Table
-- id, name, code
+---
 
-### Locations Table
-- id, name, building, floor, room
+## 📝 Development Notes
 
-## Development
+### Code Style
+- **Backend**: Follow PEP 8 Python style guide
+- **Frontend**: ESLint configuration for TypeScript/React
+- Use meaningful variable and function names
+- Add comments for complex logic
+- Keep functions small and focused
 
-### Running Tests
+### Git Workflow
 ```bash
-# Backend tests
-cd backend
-pytest
+# Create feature branch
+git checkout -b feature/your-feature-name
 
-# Frontend tests
-cd frontend
-npm test
+# Make changes and commit
+git add .
+git commit -m "Add: description of changes"
+
+# Push to remote
+git push origin feature/your-feature-name
+
+# Create pull request on GitHub
 ```
 
-### Building for Production
+### Commit Message Convention
+- **Add**: New feature or file
+- **Update**: Modify existing feature
+- **Fix**: Bug fix
+- **Refactor**: Code restructuring
+- **Docs**: Documentation changes
+- **Style**: Formatting changes
+- **Test**: Add or update tests
 
-#### Backend
-```bash
-cd backend
-# Update .env with production settings
-# Use a production WSGI server like gunicorn
-gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker
-```
+### Adding New Features
 
-#### Frontend
-```bash
-cd frontend
-npm run build
-# Serve the dist/ folder with a web server
-```
+#### Backend (New Endpoint)
+1. Add model to `backend/app/models.py`
+2. Create migration: `alembic revision -m "add new table"`
+3. Add schema to `backend/app/schemas.py`
+4. Create router in `backend/app/routers_*.py`
+5. Register router in `backend/app/main.py`
+6. Add permissions in `backend/app/permissions.py`
+7. Test endpoint in Swagger UI
 
-## Troubleshooting
+#### Frontend (New Page)
+1. Create component in `frontend/src/pages/`
+2. Add route in `frontend/src/App.tsx`
+3. Add navigation link in `frontend/src/components/Navigation.tsx`
+4. Use API client from `frontend/src/lib/api.ts`
+5. Add SweetAlert2 notifications
+6. Test in browser
 
-### Database Connection Issues
-- Verify MySQL is running: `mysql -u root -p`
-- Check DATABASE_URL in backend/.env
-- Ensure database exists: `SHOW DATABASES;`
+### Environment Variables
+Never commit these files:
+- `backend/.env`
+- `frontend/.env`
 
-### Migration Issues
-- Reset migrations: `alembic downgrade base`
-- Re-run migrations: `alembic upgrade head`
-- Check alembic/versions/ for migration files
+Always update:
+- `backend/.env.example`
+- `frontend/.env.example`
 
-### Frontend Build Issues
-- Clear node_modules: `rm -rf node_modules && npm install`
-- Clear cache: `npm run dev -- --force`
+### Database Changes
+1. Update model in `backend/app/models.py`
+2. Create migration: `alembic revision --autogenerate -m "description"`
+3. Review generated migration file
+4. Test migration: `alembic upgrade head`
+5. Test rollback: `alembic downgrade -1`
+6. Commit migration file
 
-### CORS Issues
-- Verify VITE_API_URL in frontend/.env
-- Check CORS settings in backend/app/main.py
+---
 
-## Security Notes
+## 🚀 Roadmap
 
-### Production Checklist
-- [ ] Change SECRET_KEY in backend/.env
-- [ ] Use strong database passwords
-- [ ] Enable HTTPS
-- [ ] Set secure CORS origins
-- [ ] Use environment-specific .env files
-- [ ] Enable rate limiting
-- [ ] Set up proper logging
-- [ ] Regular database backups
-- [ ] Update dependencies regularly
+### Planned Features
+- [ ] Dark mode support
+- [ ] Email notifications
+- [ ] SMS notifications for critical alerts
+- [ ] Equipment QR code generation
+- [ ] Mobile app (React Native)
+- [ ] Advanced analytics dashboard
+- [ ] Equipment warranty tracking
+- [ ] Spare parts inventory
+- [ ] Vendor management
+- [ ] Contract management
+- [ ] Document attachments (PDFs, images)
+- [ ] Equipment calibration tracking
+- [ ] Audit logs
+- [ ] Two-factor authentication (2FA)
+- [ ] Password reset via email
+- [ ] User activity tracking
+- [ ] Advanced search with filters
+- [ ] Export to PDF
+- [ ] Scheduled report generation
+- [ ] Dashboard widgets customization
+- [ ] Real-time chat for support
+- [ ] Equipment location tracking (GPS)
+- [ ] Barcode scanning
+- [ ] Integration with hospital systems (HL7, FHIR)
 
-## License
+### Version History
+- **v2.0.0** (Feb 2026) - Migration restructure, user preferences, notifications
+- **v1.5.0** (Feb 2026) - Reports, maintenance schedules, analytics
+- **v1.0.0** (Jan 2026) - Initial release
+
+---
+
+## 📚 Additional Documentation
+
+### Main Documentation
+- **README.md** (this file) - Comprehensive documentation
+- **QUICKSTART.md** - Quick start guide
+- **SETUP_NEW_COMPUTER.md** - Setup on new computer
+
+### Deployment & Setup
+- **DEPLOYMENT_GUIDE.md** - Detailed deployment instructions
+- **SETUP_SUMMARY.md** - Setup summary
+- **MIGRATION_CHECKLIST.md** - Migration checklist
+
+### Database & Migrations
+- **backend/DATABASE_SETUP.md** - Database setup details
+- **backend/MIGRATION_GUIDE.md** - Migration guide
+- **backend/TEST_MIGRATIONS.md** - Migration testing guide
+- **backend/alembic/versions/README.md** - Migration files overview
+- **backend/alembic/versions/MIGRATION_ORDER.md** - Migration order reference
+- **MIGRATION_CONSOLIDATION_SUMMARY.md** - Migration restructure details
+
+### Frontend
+- **frontend/README.md** - Frontend-specific documentation
+
+---
+
+## 🤝 Contributing
+
+### How to Contribute
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Write tests
+5. Update documentation
+6. Submit a pull request
+
+### Code Review Process
+- All changes require code review
+- Tests must pass
+- Documentation must be updated
+- Follow code style guidelines
+
+### Reporting Issues
+- Use GitHub Issues
+- Provide detailed description
+- Include steps to reproduce
+- Add screenshots if applicable
+- Specify environment (OS, browser, versions)
+
+---
+
+## 📄 License
 
 This project is proprietary software for biomedical equipment management.
 
-## Support
+---
 
-For issues and questions, please contact the development team.
+## 👨‍💻 Support & Contact
+
+For issues, questions, or support:
+- Create an issue on GitHub
+- Contact the development team
+- Check documentation files
+
+---
+
+## 🙏 Acknowledgments
+
+- FastAPI for the excellent Python web framework
+- React team for the powerful frontend library
+- Tailwind CSS for the utility-first CSS framework
+- Chart.js for beautiful charts
+- SweetAlert2 for elegant modals
+- SQLAlchemy for the robust ORM
+- Alembic for database migrations
+- All contributors and testers
+
+---
+
+## 📊 Project Statistics
+
+- **Backend**: Python, FastAPI, SQLAlchemy, MySQL
+- **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
+- **Database Tables**: 12 (11 data tables + alembic_version)
+- **Migration Files**: 12 (one per table)
+- **User Roles**: 5 (Super Admin, Manager, Department Head, Support, Department Incharge)
+- **Support Types**: 9 (Biomed Tech, Aircon, Plumber, Carpenter, Painter, Electrician, IT, House Keeping, Other)
+- **API Endpoints**: 50+
+- **Pages**: 15+
+- **Components**: 10+
 
 ---
 
 **Version**: 2.0.0  
-**Last Updated**: February 2026
+**Last Updated**: February 12, 2026  
+**Status**: Active Development
 
-## Recent Updates (v2.0.0)
+---
 
-### Role System Overhaul
-- Renamed and restructured user roles for better clarity
-- Added support_type field for technical staff specialization
-- Updated all permissions and access controls
+## 🎉 Quick Commands Reference
 
-### Notifications System
-- Real-time notification bell with unread count
-- Automatic notifications for all major events
-- Role-based notification routing
-- Notification management (mark read, delete, filter)
+```bash
+# Backend
+cd backend
+source .venv/bin/activate
+uvicorn app.main:app --reload --port 8000
+alembic upgrade head
+python seed_database.py
+python reset_database.py
 
-### Reports Generation
-- Excel report downloads for equipment, tickets, and maintenance
-- Advanced filtering options
-- Manager and Super Admin access only
+# Frontend
+cd frontend
+npm install
+npm run dev
+npm run build
 
-### Enhanced Dashboard
-- Chart.js integration for data visualization
-- Line charts, pie charts, and bar charts
-- Department repairs analytics
-- Role-specific dashboards
+# Database
+mysql -u root -p
+CREATE DATABASE biocode CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+mysqldump -u root -p biocode > backup.sql
+mysql -u root -p biocode < backup.sql
 
-### Maintenance Tracking
-- Scheduled maintenance with automatic date calculation
-- Overdue maintenance alerts
-- Department-based filtering
-- Maintenance completion notifications
+# Migrations
+alembic current
+alembic history
+alembic upgrade head
+alembic downgrade -1
+alembic revision -m "description"
+
+# Git
+git status
+git add .
+git commit -m "message"
+git push origin main
+```
+
+---
+
+**🎯 Ready to get started? Follow the [Quick Setup](#-quick-setup) section above!**
