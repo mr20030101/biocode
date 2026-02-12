@@ -18,9 +18,49 @@ from app.models import (
 from app.auth import hash_password
 
 
+def check_migrations_applied(db: Session):
+    """Check if migrations have been run"""
+    from sqlalchemy import inspect, text
+    
+    inspector = inspect(db.bind)
+    tables = inspector.get_table_names()
+    
+    # Check if alembic_version table exists
+    if 'alembic_version' not in tables:
+        return False, "alembic_version table not found"
+    
+    # Check if all required tables exist
+    required_tables = [
+        'users', 'departments', 'locations', 'equipment', 'tickets',
+        'equipment_logs', 'equipment_history', 'ticket_responses',
+        'maintenance_schedules', 'suppliers', 'notifications'
+    ]
+    
+    missing_tables = [table for table in required_tables if table not in tables]
+    
+    if missing_tables:
+        return False, f"Missing tables: {', '.join(missing_tables)}"
+    
+    return True, "All migrations applied"
+
+
 def clear_database(db: Session):
     """Clear all data from tables"""
     print("🗑️  Clearing existing data...")
+    
+    # Check if migrations have been run
+    migrations_ok, message = check_migrations_applied(db)
+    
+    if not migrations_ok:
+        print(f"\n❌ Error: {message}")
+        print("\n⚠️  Migrations have not been run yet!")
+        print("\nPlease run migrations first:")
+        print("   cd backend")
+        print("   python -m alembic upgrade head")
+        print("\nOr use the reset script to do everything:")
+        print("   cd backend")
+        print("   python reset_database.py")
+        sys.exit(1)
     
     # Delete in reverse order of dependencies
     db.query(Notification).delete()
@@ -720,7 +760,7 @@ def main():
     db = SessionLocal()
     
     try:
-        # Clear existing data
+        # Clear existing data (includes migration check)
         clear_database(db)
         
         # Seed data in order - departments and suppliers first, then users
@@ -759,6 +799,8 @@ def main():
         
     except Exception as e:
         print(f"\n❌ Error during seeding: {e}")
+        print("\n💡 Tip: If you see table-related errors, make sure migrations are run first:")
+        print("   python -m alembic upgrade head")
         db.rollback()
         sys.exit(1)
     finally:

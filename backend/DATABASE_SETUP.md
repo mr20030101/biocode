@@ -40,7 +40,7 @@ DATABASE_URL=mysql+pymysql://root:@localhost/biocode
 SECRET_KEY=your-secret-key-here
 ```
 
-### 3. Run Database Reset (Recommended)
+### 3. Run Database Reset (Recommended - One Command Setup)
 
 This will drop all tables, run migrations, and seed data:
 
@@ -49,19 +49,21 @@ cd backend
 python reset_database.py
 ```
 
-### 4. Manual Setup (Alternative)
+### 4. Manual Setup (Alternative - Step by Step)
 
-If you prefer manual setup:
+If you prefer manual setup or need to run steps separately:
 
 ```bash
 cd backend
 
-# Run migrations
+# Step 1: Run migrations to create tables
 python -m alembic upgrade head
 
-# Seed database
+# Step 2: Seed database with sample data
 python seed_database.py
 ```
+
+**Important:** The seeding script will automatically check if migrations have been run and provide helpful error messages if tables are missing.
 
 ## Migration Management
 
@@ -144,6 +146,26 @@ Dept Incharge (ICU):        incharge2@biocode.com / incharge123
 ```
 
 ## Troubleshooting
+
+### "Table doesn't exist" Error When Seeding
+
+If you see an error like `Table 'biocode.notifications' doesn't exist`:
+
+**Cause:** The seeding script was run before migrations were applied.
+
+**Solution:**
+```bash
+cd backend
+
+# Option 1: Run migrations then seed
+python -m alembic upgrade head
+python seed_database.py
+
+# Option 2: Use reset script (recommended)
+python reset_database.py
+```
+
+The seeding script now includes automatic checks and will provide helpful error messages if migrations haven't been run.
 
 ### Migration Conflicts
 

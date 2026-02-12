@@ -150,11 +150,17 @@ python3 -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
+# Option 1: Interactive setup script (Recommended)
+./setup_database.sh
+
+# Option 2: Manual setup
 # Run migrations (creates all 12 tables)
 alembic upgrade head
-
 # Seed sample data
 python seed_database.py
+
+# Option 3: Full reset (drops all tables, runs migrations, seeds data)
+python reset_database.py
 ```
 
 ### 4. Frontend Setup
@@ -823,6 +829,35 @@ mysql -u root -p -e "DROP DATABASE biocode_test;"
    SELECT * FROM alembic_version;
    UPDATE alembic_version SET version_num = '0012_add_user_preferences';
    ```
+
+### Seeding Error: "Table doesn't exist"
+**Problem**: Error like `Table 'biocode.notifications' doesn't exist` when running `seed_database.py`
+
+**Cause**: Seeding script was run before migrations were applied.
+
+**Solutions**:
+The seeding script now includes automatic checks and will show a helpful error message if migrations haven't been run. If you see this error:
+
+1. Run migrations first:
+   ```bash
+   cd backend
+   python -m alembic upgrade head
+   python seed_database.py
+   ```
+
+2. Or use the reset script (recommended):
+   ```bash
+   cd backend
+   python reset_database.py
+   ```
+
+3. Or use the interactive setup script:
+   ```bash
+   cd backend
+   ./setup_database.sh
+   ```
+
+**Note**: The seeder now validates that all required tables exist before attempting to clear data, preventing cryptic database errors.
 
 ### Port Already in Use
 **Problem**: Port 8000 or 5173 is already in use
