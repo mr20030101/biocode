@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Navigation } from "../components/Navigation";
+import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -156,9 +156,8 @@ export function UserProfilePage() {
   
   if (!canViewProfile) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Layout>
+        <div className="mx-auto py-8">
           <div className="card">
             <div className="text-center py-12">
               <svg
@@ -181,26 +180,24 @@ export function UserProfilePage() {
             </div>
           </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Layout>
+        <div className="mx-auto py-8">
           <div className="text-center py-12 text-gray-500">Loading...</div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   if (error || !stats) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Layout>
+        <div className="mx-auto py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
             {error || "Failed to load user statistics"}
           </div>
@@ -208,15 +205,13 @@ export function UserProfilePage() {
             Back to Users
           </button>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <Layout>
+      <div className="mx-auto py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           {auth.isSuperAdmin() ? (
@@ -613,6 +608,6 @@ export function UserProfilePage() {
           </div>
         )}
       </div>
-    </div>
+    </Layout>
   );
 }

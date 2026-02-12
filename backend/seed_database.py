@@ -12,6 +12,7 @@ from app.database import SessionLocal, engine
 from app.models import (
     Base, User, Department, Location, Equipment, Ticket, 
     EquipmentLog, EquipmentHistory, TicketResponse, MaintenanceSchedule,
+    Supplier, Notification,
     UserRole, EquipmentStatus, LogType, TicketStatus
 )
 from app.auth import hash_password
@@ -22,6 +23,7 @@ def clear_database(db: Session):
     print("🗑️  Clearing existing data...")
     
     # Delete in reverse order of dependencies
+    db.query(Notification).delete()
     db.query(MaintenanceSchedule).delete()
     db.query(TicketResponse).delete()
     db.query(EquipmentHistory).delete()
@@ -29,6 +31,7 @@ def clear_database(db: Session):
     db.query(Ticket).delete()
     db.query(Equipment).delete()
     db.query(Location).delete()
+    db.query(Supplier).delete()
     db.query(Department).delete()
     db.query(User).delete()
     
@@ -172,6 +175,77 @@ def seed_users(db: Session, departments):
     return users
 
 
+def seed_suppliers(db: Session):
+    """Create medical equipment suppliers"""
+    print("\n🏢 Seeding suppliers...")
+    
+    suppliers_data = [
+        {
+            "name": "MedTech Solutions Inc.",
+            "code": "MTS",
+            "contact_person": "John Anderson",
+            "email": "sales@medtechsolutions.com",
+            "phone": "+1-555-0101",
+            "address": "123 Medical Plaza, Boston, MA 02101",
+            "website": "www.medtechsolutions.com"
+        },
+        {
+            "name": "Global Medical Equipment",
+            "code": "GME",
+            "contact_person": "Sarah Chen",
+            "email": "info@globalmedequip.com",
+            "phone": "+1-555-0202",
+            "address": "456 Healthcare Ave, New York, NY 10001",
+            "website": "www.globalmedequip.com"
+        },
+        {
+            "name": "BioMed Supplies Co.",
+            "code": "BMS",
+            "contact_person": "Michael Rodriguez",
+            "email": "contact@biomedsupplies.com",
+            "phone": "+1-555-0303",
+            "address": "789 Innovation Dr, San Francisco, CA 94102",
+            "website": "www.biomedsupplies.com"
+        },
+        {
+            "name": "Healthcare Systems Ltd.",
+            "code": "HSL",
+            "contact_person": "Emily Watson",
+            "email": "sales@healthcaresystems.com",
+            "phone": "+1-555-0404",
+            "address": "321 Medical Center Blvd, Chicago, IL 60601",
+            "website": "www.healthcaresystems.com"
+        },
+        {
+            "name": "Advanced Diagnostics Corp.",
+            "code": "ADC",
+            "contact_person": "David Kim",
+            "email": "info@advanceddiagnostics.com",
+            "phone": "+1-555-0505",
+            "address": "654 Tech Park Way, Seattle, WA 98101",
+            "website": "www.advanceddiagnostics.com"
+        },
+    ]
+    
+    suppliers = []
+    for data in suppliers_data:
+        supplier = Supplier(
+            name=data["name"],
+            code=data["code"],
+            contact_person=data["contact_person"],
+            email=data["email"],
+            phone=data["phone"],
+            address=data["address"],
+            website=data.get("website")
+        )
+        db.add(supplier)
+        suppliers.append(supplier)
+    
+    db.commit()
+    print(f"✅ Created {len(suppliers)} suppliers")
+    return suppliers
+
+
 def seed_departments(db: Session):
     """Create hospital departments"""
     print("\n🏥 Seeding departments...")
@@ -237,7 +311,7 @@ def seed_locations(db: Session):
     return locations
 
 
-def seed_equipment(db: Session, departments, locations):
+def seed_equipment(db: Session, departments, locations, suppliers):
     """Create biomedical equipment"""
     print("\n🔧 Seeding equipment...")
     
@@ -285,10 +359,18 @@ def seed_equipment(db: Session, departments, locations):
     for data in equipment_data:
         dept = dept_map.get(data["dept"])
         location = random.choice(locations) if locations else None
+        supplier = random.choice(suppliers) if suppliers else None
         
         # Random in-service date within last 1-5 years
         days_ago = random.randint(365, 365 * 5)
         in_service_date = datetime.utcnow() - timedelta(days=days_ago)
+        
+        # Acquisition date is 30-90 days before in-service date
+        acquisition_days_before = random.randint(30, 90)
+        acquisition_date = in_service_date - timedelta(days=acquisition_days_before)
+        
+        # Random acquired value between $5,000 and $500,000
+        acquired_value = f"${random.randint(5, 500) * 1000:,}"
         
         equip = Equipment(
             device_name=data["device_name"],
@@ -299,9 +381,12 @@ def seed_equipment(db: Session, departments, locations):
             status=data["status"],
             department_id=dept.id if dept else None,
             location_id=location.id if location else None,
+            supplier_id=supplier.id if supplier else None,
+            acquisition_date=acquisition_date,
+            acquired_value=acquired_value,
             in_service_date=in_service_date,
             repair_count=data["repair_count"],
-            notes=f"Installed on {in_service_date.strftime('%Y-%m-%d')}"
+            notes=f"Acquired from {supplier.name if supplier else 'Unknown'} on {acquisition_date.strftime('%Y-%m-%d')}. Installed on {in_service_date.strftime('%Y-%m-%d')}"
         )
         db.add(equip)
         equipment_list.append(equip)
@@ -638,11 +723,12 @@ def main():
         # Clear existing data
         clear_database(db)
         
-        # Seed data in order - departments first, then users
+        # Seed data in order - departments and suppliers first, then users
         departments = seed_departments(db)
+        suppliers = seed_suppliers(db)
         users = seed_users(db, departments)
         locations = seed_locations(db)
-        equipment_list = seed_equipment(db, departments, locations)
+        equipment_list = seed_equipment(db, departments, locations, suppliers)
         tickets = seed_tickets(db, equipment_list, users)
         logs = seed_equipment_logs(db, equipment_list, users)
         schedules = seed_maintenance_schedules(db, equipment_list, users)
@@ -654,6 +740,7 @@ def main():
         print("\n📊 Summary:")
         print(f"   Users: {len(users)}")
         print(f"   Departments: {len(departments)}")
+        print(f"   Suppliers: {len(suppliers)}")
         print(f"   Locations: {len(locations)}")
         print(f"   Equipment: {len(equipment_list)}")
         print(f"   Tickets: {len(tickets)}")

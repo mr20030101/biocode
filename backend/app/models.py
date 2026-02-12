@@ -130,6 +130,22 @@ class Department(Base, TimestampMixin):
     equipment: Mapped[list["Equipment"]] = relationship(back_populates="department")
 
 
+class Supplier(Base, TimestampMixin):
+    __tablename__ = "suppliers"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid_str)
+    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
+    contact_person: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    website: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    equipment: Mapped[list["Equipment"]] = relationship(back_populates="supplier")
+
+
 class Ticket(Base, TimestampMixin):
     """
     Support ticket corresponding to the CLI script tickets.
@@ -197,6 +213,15 @@ class Equipment(Base, TimestampMixin):
     manufacturer: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     model: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
+    # Supplier Information
+    supplier_id: Mapped[Optional[str]] = mapped_column(
+        String(36), ForeignKey("suppliers.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    
+    # Acquisition Information
+    acquisition_date: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    acquired_value: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)  # Store as string to handle currency
+
     status: Mapped[EquipmentStatus] = mapped_column(
         Enum(EquipmentStatus), nullable=False, default=EquipmentStatus.active
     )
@@ -219,6 +244,7 @@ class Equipment(Base, TimestampMixin):
 
     location: Mapped[Optional[Location]] = relationship(back_populates="equipment")
     department: Mapped[Optional[Department]] = relationship(back_populates="equipment")
+    supplier: Mapped[Optional[Supplier]] = relationship(back_populates="equipment")
     logs: Mapped[list["EquipmentLog"]] = relationship(
         back_populates="equipment", cascade="all,delete-orphan"
     )

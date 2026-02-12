@@ -31,6 +31,25 @@ def upgrade() -> None:
         sa.UniqueConstraint('code')
     )
 
+    # Create suppliers table
+    op.create_table(
+        'suppliers',
+        sa.Column('id', sa.String(length=36), nullable=False),
+        sa.Column('name', sa.String(length=255), nullable=False),
+        sa.Column('code', sa.String(length=64), nullable=True),
+        sa.Column('contact_person', sa.String(length=255), nullable=True),
+        sa.Column('email', sa.String(length=255), nullable=True),
+        sa.Column('phone', sa.String(length=50), nullable=True),
+        sa.Column('address', sa.Text(), nullable=True),
+        sa.Column('website', sa.String(length=255), nullable=True),
+        sa.Column('notes', sa.Text(), nullable=True),
+        sa.Column('created_at', sa.DateTime(timezone=True), nullable=False),
+        sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
+        sa.PrimaryKeyConstraint('id'),
+        sa.UniqueConstraint('name'),
+        sa.UniqueConstraint('code')
+    )
+
     # Create users table
     op.create_table(
         'users',
@@ -76,6 +95,9 @@ def upgrade() -> None:
         sa.Column('device_name', sa.String(length=255), nullable=False),
         sa.Column('manufacturer', sa.String(length=255), nullable=True),
         sa.Column('model', sa.String(length=255), nullable=True),
+        sa.Column('supplier_id', sa.String(length=36), nullable=True),
+        sa.Column('acquisition_date', sa.DateTime(timezone=True), nullable=True),
+        sa.Column('acquired_value', sa.String(length=50), nullable=True),
         sa.Column('status', sa.Enum('active', 'out_of_service', 'retired', name='equipmentstatus'), nullable=False),
         sa.Column('location_id', sa.String(length=36), nullable=True),
         sa.Column('department_id', sa.String(length=36), nullable=True),
@@ -90,11 +112,13 @@ def upgrade() -> None:
         sa.Column('updated_at', sa.DateTime(timezone=True), nullable=False),
         sa.ForeignKeyConstraint(['location_id'], ['locations.id'], ondelete='SET NULL'),
         sa.ForeignKeyConstraint(['department_id'], ['departments.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['supplier_id'], ['suppliers.id'], ondelete='SET NULL'),
         sa.PrimaryKeyConstraint('id'),
         sa.UniqueConstraint('asset_tag', name='uq_equipment_asset_tag')
     )
     op.create_index(op.f('ix_equipment_device_name'), 'equipment', ['device_name'], unique=False)
     op.create_index(op.f('ix_equipment_manufacturer_model'), 'equipment', ['manufacturer', 'model'], unique=False)
+    op.create_index(op.f('ix_equipment_supplier_id'), 'equipment', ['supplier_id'], unique=False)
     op.create_index(op.f('ix_equipment_is_currently_down'), 'equipment', ['is_currently_down'], unique=False)
     op.create_index(op.f('ix_equipment_criticality'), 'equipment', ['criticality'], unique=False)
 
@@ -250,5 +274,6 @@ def downgrade() -> None:
     op.drop_table('tickets')
     op.drop_table('equipment')
     op.drop_table('locations')
+    op.drop_table('suppliers')
     op.drop_table('users')
     op.drop_table('departments')

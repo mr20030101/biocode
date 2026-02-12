@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from .auth import get_db, get_current_user
 from .models import Equipment, User, EquipmentStatus
-from .schemas import EquipmentCreate, EquipmentOut, EquipmentUpdateStatus
+from .schemas import EquipmentCreate, EquipmentOut, EquipmentUpdateStatus, EquipmentUpdate
 from .permissions import (
     can_update_equipment_status,
     can_create_equipment,
@@ -134,6 +134,42 @@ def update_equipment_status(
     
     # Send notifications if status changed
     if old_status != equipment.status:
+        notification_service.notify_equipment_status_changed(
+            db, equipment, old_status.value, equipment.status.value, current_user
+        )
+    
+    return equipment
+
+
+@router.put("/{equipment_id}", response_model=EquipmentOut)
+def update_equipment(
+    equipment_id: str,
+    payload: EquipmentUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Full equipment update - only manager and super_admin can do this"""
+    # Only manager and super_admin can fully update equipment
+    if not can_create_equipment(current_user):
+        raise HTTPException(status_code=403, detail="Manager access required")
+    
+    equipment = db.query(Equipment).filter(Equipment.id == equipment_id).first()
+    if not equipment:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+    
+    # Track old status for notifications
+    old_status = equipment.status
+    
+    # Update only provided fields
+    update_data = payload.dict(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(equipment, field, value)
+    
+    db.commit()
+    db.refresh(equipment)
+    
+    # Send notifications if status changed
+    if 'status' in update_data and old_status != equipment.status:
         notification_service.notify_equipment_status_changed(
             db, equipment, old_status.value, equipment.status.value, current_user
         )

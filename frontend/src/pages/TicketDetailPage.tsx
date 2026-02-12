@@ -215,7 +215,7 @@ export function TicketDetailPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="page-content max-w-4xl mx-auto py-8">
           <div className="text-center py-12 text-gray-500">Loading...</div>
         </div>
       </div>
@@ -226,7 +226,7 @@ export function TicketDetailPage() {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navigation />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="page-content max-w-4xl mx-auto py-8">
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
             {error}
           </div>
@@ -244,7 +244,7 @@ export function TicketDetailPage() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="page-content max-w-4xl mx-auto py-8">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <button

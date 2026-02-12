@@ -56,17 +56,44 @@ class DepartmentOut(DepartmentBase):
         from_attributes = True
 
 
+class SupplierBase(BaseModel):
+    name: str
+    code: Optional[str] = None
+    contact_person: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    website: Optional[str] = None
+    notes: Optional[str] = None
+
+
+class SupplierCreate(SupplierBase):
+    pass
+
+
+class SupplierOut(SupplierBase):
+    id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class EquipmentBase(BaseModel):
     asset_tag: str
     device_name: str
     manufacturer: Optional[str] = None
     model: Optional[str] = None
+    serial_number: Optional[str] = None
+    supplier_id: Optional[str] = None
+    acquisition_date: Optional[datetime] = None
+    acquired_value: Optional[str] = None
     status: EquipmentStatus = EquipmentStatus.active
     department_id: Optional[str] = None
 
 
 class EquipmentCreate(EquipmentBase):
-    serial_number: Optional[str] = None
     location_id: Optional[str] = None
     in_service_date: Optional[datetime] = None
     notes: Optional[str] = None
@@ -85,6 +112,23 @@ class EquipmentOut(EquipmentBase):
 
 class EquipmentUpdateStatus(BaseModel):
     status: EquipmentStatus
+
+
+class EquipmentUpdate(BaseModel):
+    """Full equipment update - all fields optional"""
+    asset_tag: Optional[str] = None
+    device_name: Optional[str] = None
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    serial_number: Optional[str] = None
+    supplier_id: Optional[str] = None
+    acquisition_date: Optional[datetime] = None
+    acquired_value: Optional[str] = None
+    status: Optional[EquipmentStatus] = None
+    department_id: Optional[str] = None
+    location_id: Optional[str] = None
+    in_service_date: Optional[datetime] = None
+    notes: Optional[str] = None
 
 
 class TicketBase(BaseModel):

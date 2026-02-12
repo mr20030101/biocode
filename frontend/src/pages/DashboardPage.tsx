@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Navigation } from "../components/Navigation";
+import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 import {
@@ -282,10 +282,8 @@ export function DashboardPage() {
     };
 
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Layout>
+        <div className="max-w-7xl mx-auto py-8">
           <div className="mb-8">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg">
@@ -445,16 +443,14 @@ export function DashboardPage() {
             </>
           )}
         </div>
-      </div>
+      </Layout>
     );
   }
 
   // General Dashboard View (for non-tech users)
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <Layout>
+      <div className="max-w-7xl mx-auto py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3">
@@ -685,6 +681,6 @@ export function DashboardPage() {
           </>
         )}
       </div>
-    </div>
+    </Layout>
   );
 }

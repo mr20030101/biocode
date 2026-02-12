@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Navigation } from "../components/Navigation";
+import { Layout } from "../components/Layout";
 import { apiFetch } from "../lib/api";
 import { useAuth } from "../lib/auth";
 
@@ -127,9 +127,8 @@ export function ReportsPage() {
   // Redirect if not supervisor or above
   if (!auth.isSupervisorOrAbove()) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Layout>
+        <div className="mx-auto py-8">
           <div className="card">
             <div className="text-center py-12">
               <svg
@@ -152,15 +151,13 @@ export function ReportsPage() {
             </div>
           </div>
         </div>
-      </div>
+      </Layout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <Layout>
+      <div className="mx-auto py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-3 mb-2">
@@ -491,6 +488,6 @@ export function ReportsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </Layout>
   );
 }
