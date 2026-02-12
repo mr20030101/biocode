@@ -3,6 +3,7 @@
 A comprehensive web application for managing biomedical equipment, service tickets, departments, and user roles in healthcare facilities.
 
 ## 📑 Table of Contents
+- [Installation & Setup](#-installation--setup) ⭐ **START HERE**
 - [Features](#features)
 - [Technology Stack](#technology-stack)
 - [Quick Setup](#quick-setup)
@@ -15,6 +16,222 @@ A comprehensive web application for managing biomedical equipment, service ticke
 - [Deployment](#deployment)
 - [Testing](#testing)
 - [Troubleshooting](#troubleshooting)
+
+---
+
+## 🔧 Installation & Setup
+
+### Prerequisites
+- **Python 3.9+** (for backend)
+- **Node.js 18+** (for frontend)
+- **MySQL 8.0+** (for database)
+- **Git** (for version control)
+
+### Step 1: Clone Repository
+```bash
+git clone <your-repo-url>
+cd biocode
+```
+
+### Step 2: Create Database
+```bash
+mysql -u root -p
+CREATE DATABASE biocode CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+EXIT;
+```
+
+### Step 3: Backend Setup
+
+#### 3.1 Create Virtual Environment
+```bash
+cd backend
+python3 -m venv .venv
+
+# Activate virtual environment
+# On macOS/Linux:
+source .venv/bin/activate
+
+# On Windows:
+.venv\Scripts\activate
+```
+
+#### 3.2 Install Dependencies
+```bash
+pip install -r requirements.txt
+```
+
+**⚠️ Important Dependencies Installed:**
+- `python-multipart==0.0.22` - Required for FastAPI form data handling
+- `argon2-cffi==25.1.0` - For secure password hashing (replaces bcrypt on Windows)
+- `python-dotenv==1.2.1` - For environment variable management
+- All other dependencies listed in requirements.txt
+
+#### 3.3 Configure Environment
+```bash
+cp .env.example .env
+```
+
+Edit `backend/.env`:
+```env
+DATABASE_URL=mysql+pymysql://root:YOUR_PASSWORD@localhost:3306/biocode
+SECRET_KEY=your-secret-key-change-in-production
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
+DEBUG=False
+```
+
+#### 3.4 Initialize Database
+```bash
+# Run migrations (creates all 12 tables)
+alembic upgrade head
+
+# Seed sample data
+python seed_database.py
+```
+
+**Or use the automated setup script:**
+```bash
+./setup_database.sh
+```
+
+**Or reset everything (development only):**
+```bash
+python reset_database.py
+```
+
+#### 3.5 Start Backend Server
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+✅ Backend running at: http://localhost:8000  
+📚 API Docs at: http://localhost:8000/docs
+
+### Step 4: Frontend Setup
+
+#### 4.1 Install Dependencies
+```bash
+cd ../frontend
+npm install
+```
+
+#### 4.2 Configure Environment
+```bash
+cp .env.example .env
+```
+
+Edit `frontend/.env`:
+```env
+VITE_API_BASE_URL=http://127.0.0.1:8000
+```
+
+#### 4.3 Start Frontend Server
+```bash
+npm run dev
+```
+
+✅ Frontend running at: http://localhost:5173
+
+### Step 5: Access Application
+
+1. **Open browser**: http://localhost:5173
+2. **Login with default credentials**:
+   - Email: `superadmin@biocode.com`
+   - Password: `admin123`
+
+### Step 6: Verify Installation
+
+**Backend Health Check:**
+```bash
+curl http://localhost:8000/health
+# Should return: {"status":"ok"}
+```
+
+**Frontend Check:**
+- Should see login page at http://localhost:5173
+- Should be able to login successfully
+
+---
+
+### Common Installation Issues & Solutions
+
+#### Issue 1: `RuntimeError: Form data requires "python-multipart"`
+**Cause**: Missing python-multipart dependency  
+**Solution**:
+```bash
+cd backend
+pip install python-multipart
+```
+
+#### Issue 2: `ValueError: password cannot be longer than 72 bytes`
+**Cause**: Bcrypt compatibility issue on Windows  
+**Solution**: Already fixed in requirements.txt (uses argon2-cffi instead)
+
+#### Issue 3: `Cannot connect to MySQL database`
+**Cause**: Wrong credentials or MySQL not running  
+**Solution**:
+```bash
+# Verify MySQL is running
+mysql -u root -p
+
+# Check DATABASE_URL in backend/.env
+# Format: mysql+pymysql://username:password@localhost:3306/biocode
+```
+
+#### Issue 4: `Table doesn't exist` when running seed_database.py
+**Cause**: Migrations not run before seeding  
+**Solution**:
+```bash
+cd backend
+alembic upgrade head
+python seed_database.py
+```
+
+#### Issue 5: Port 8000 or 5173 already in use
+**Solution**:
+```bash
+# Backend on different port
+uvicorn app.main:app --reload --port 8001
+
+# Frontend on different port
+npm run dev -- --port 5174
+```
+
+#### Issue 6: npm install fails
+**Solution**:
+```bash
+cd frontend
+rm -rf node_modules package-lock.json
+npm cache clean --force
+npm install
+```
+
+---
+
+### Automated Setup (Optional)
+
+**Using start script:**
+```bash
+# From root directory
+./start.sh
+```
+
+This will start both backend and frontend servers in the background.
+
+**Stop servers:**
+```bash
+./stop.sh
+```
+
+---
+
+### Next Steps After Installation
+
+1. ✅ **Verify login works** - Try logging in with superadmin@biocode.com / admin123
+2. 📖 **Read the documentation** - Check out the [Features](#features) section
+3. 🎯 **Explore the dashboard** - Navigate through different pages
+4. 👥 **Try different user roles** - Login with other test accounts (see [Default Credentials](#default-credentials))
+5. 🔧 **Customize settings** - Update user preferences and settings
 
 ---
 
