@@ -25,12 +25,12 @@ def register_user(payload: UserCreate, db: Session = Depends(get_db)):
         full_name=payload.full_name,
         role=payload.role,
         is_active=True,
-        password_hash=hash_password(payload.password),
+        password_hash=hash_password(str(payload.password).strip()),
     )
     db.add(user)
     db.commit()
     db.refresh(user)
-    return user
+    return UserOut.model_validate(user)
 
 
 @router.post("/login", response_model=Token)
@@ -38,9 +38,11 @@ def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db),
 ):
-    user = authenticate_user(db, email=form_data.username, password=form_data.password)
+    user = authenticate_user(
+        db, email=form_data.username, password=form_data.password)
     if not user:
-        raise HTTPException(status_code=400, detail="Incorrect email or password")
+        raise HTTPException(
+            status_code=400, detail="Incorrect email or password")
 
     token = create_access_token({"sub": user.id})
     return Token(access_token=token)
@@ -65,14 +67,15 @@ def list_users(
     else:
         # Others only see active users (for ticket assignment)
         query = db.query(User).filter(User.is_active == True)
-    
+
     # Get total count
     total = query.count()
-    
+
     # Apply pagination
     offset = (page - 1) * page_size
-    users = query.order_by(User.full_name).offset(offset).limit(page_size).all()
-    
+    users = query.order_by(User.full_name).offset(
+        offset).limit(page_size).all()
+
     # Convert to dict manually
     items = []
     for user in users:
@@ -84,7 +87,7 @@ def list_users(
             "is_active": user.is_active,
             "department_id": user.department_id,
         })
-    
+
     return {
         "items": items,
         "total": total,
@@ -103,11 +106,11 @@ def update_user(
 ):
     """Update user - only super_admin can do this"""
     require_super_admin(current_user)
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     # Update fields if provided
     if payload.email is not None:
         # Check if email is already taken by another user
@@ -118,16 +121,16 @@ def update_user(
         if existing:
             raise HTTPException(status_code=400, detail="Email already in use")
         user.email = payload.email
-    
+
     if payload.full_name is not None:
         user.full_name = payload.full_name
-    
+
     if payload.role is not None:
         user.role = payload.role
-    
+
     if payload.is_active is not None:
         user.is_active = payload.is_active
-    
+
     db.commit()
     db.refresh(user)
     return user
@@ -146,52 +149,52 @@ def get_user_stats(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only access your own statistics"
         )
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     # Get current date info
     now = datetime.now()
     current_year = now.year
     current_month = now.month
-    
+
     # Total tickets assigned
     total_assigned = db.query(Ticket).filter(
         Ticket.assigned_to_user_id == user_id
     ).count()
-    
+
     # Tickets resolved (not closed, just resolved)
     total_resolved = db.query(Ticket).filter(
         Ticket.assigned_to_user_id == user_id,
         Ticket.status == TicketStatus.resolved
     ).count()
-    
+
     # Tickets closed
     total_closed = db.query(Ticket).filter(
         Ticket.assigned_to_user_id == user_id,
         Ticket.status == TicketStatus.closed
     ).count()
-    
+
     # Tickets in progress
     in_progress = db.query(Ticket).filter(
         Ticket.assigned_to_user_id == user_id,
         Ticket.status == TicketStatus.in_progress
     ).count()
-    
+
     # Open tickets
     open_tickets = db.query(Ticket).filter(
         Ticket.assigned_to_user_id == user_id,
         Ticket.status == TicketStatus.open
     ).count()
-    
+
     # Monthly statistics for the last 12 months
     monthly_stats = []
     for i in range(11, -1, -1):  # Last 12 months
         target_date = now - timedelta(days=30 * i)
         target_year = target_date.year
         target_month = target_date.month
-        
+
         # Count resolved tickets in this month
         resolved_count = db.query(Ticket).filter(
             Ticket.assigned_to_user_id == user_id,
@@ -199,21 +202,21 @@ def get_user_stats(
             extract('year', Ticket.updated_at) == target_year,
             extract('month', Ticket.updated_at) == target_month
         ).count()
-        
+
         # Count assigned tickets in this month
         assigned_count = db.query(Ticket).filter(
             Ticket.assigned_to_user_id == user_id,
             extract('year', Ticket.created_at) == target_year,
             extract('month', Ticket.created_at) == target_month
         ).count()
-        
+
         monthly_stats.append({
             "month": target_date.strftime("%B"),
             "year": target_year,
             "resolved": resolved_count,
             "assigned": assigned_count
         })
-    
+
     return {
         "user": {
             "id": user.id,
@@ -242,20 +245,20 @@ def delete_user(
 ):
     """Delete user - only super_admin can do this"""
     require_super_admin(current_user)
-    
+
     # Prevent deleting yourself
     if current_user.id == user_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="You cannot delete your own account"
         )
-    
+
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-    
+
     # Delete the user
     db.delete(user)
     db.commit()
-    
+
     return {"message": f"User {user.full_name} has been deleted successfully"}
