@@ -17,6 +17,7 @@ export function NewEquipmentPage() {
   const [model, setModel] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
+  const [inServiceDate, setInServiceDate] = useState("");
   const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -50,6 +51,7 @@ export function NewEquipmentPage() {
           status: "active",
           department_id: departmentId || null,
           serial_number: serialNumber || null,
+          in_service_date: inServiceDate || null,
         }),
       });
       nav("/equipment");
@@ -63,7 +65,7 @@ export function NewEquipmentPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">New Equipment</h1>
@@ -83,6 +85,18 @@ export function NewEquipmentPage() {
                 required
                 className="input-field"
                 placeholder="e.g., BIO-001"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Equipment Date of Installation
+              </label>
+              <input
+                type="date"
+                value={inServiceDate}
+                onChange={(e) => setInServiceDate(e.target.value)}
+                className="input-field"
               />
             </div>
 
