@@ -1,16 +1,15 @@
+from .routers_user_preferences import router as user_preferences_router
+from .routers_notifications import router as notifications_router
+from .routers_reports import router as reports_router
+from .routers_analytics import router as analytics_router
+from .routers_maintenance import router as maintenance_router
+from .routers_tickets import router as tickets_router
+from .routers_suppliers import router as suppliers_router
+from .routers_departments import router as departments_router
+from .routers_equipment import router as equipment_router
+from .routers_auth import router as auth_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
-from .routers_auth import router as auth_router
-from .routers_equipment import router as equipment_router
-from .routers_departments import router as departments_router
-from .routers_suppliers import router as suppliers_router
-from .routers_tickets import router as tickets_router
-from .routers_maintenance import router as maintenance_router
-from .routers_analytics import router as analytics_router
-from .routers_reports import router as reports_router
-from .routers_notifications import router as notifications_router
-from .routers_user_preferences import router as user_preferences_router
 
 
 app = FastAPI(title="Biocode Biomedical Equipment API")
@@ -44,4 +43,3 @@ app.include_router(user_preferences_router)
 @app.get("/health")
 def health_check():
     return {"status": "ok"}
-

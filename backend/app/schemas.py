@@ -86,7 +86,6 @@ class EquipmentBase(BaseModel):
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     serial_number: Optional[str] = None
-    supplier_id: Optional[str] = None
     acquisition_date: Optional[datetime] = None
     acquired_value: Optional[str] = None
     status: EquipmentStatus = EquipmentStatus.active
@@ -121,7 +120,6 @@ class EquipmentUpdate(BaseModel):
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     serial_number: Optional[str] = None
-    supplier_id: Optional[str] = None
     acquisition_date: Optional[datetime] = None
     acquired_value: Optional[str] = None
     status: Optional[EquipmentStatus] = None
@@ -239,4 +237,3 @@ class NotificationOut(NotificationBase):
 
     class Config:
         from_attributes = True
-

@@ -1,18 +1,30 @@
-from datetime import datetime
-from typing import Optional
-
-from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
-from passlib.context import CryptContext
-from sqlalchemy.orm import Session
-
-from . import config
-from .database import SessionLocal
 from .models import User
+from .database import SessionLocal
+from . import config
+from sqlalchemy.orm import Session
+from passlib.context import CryptContext
+from jose import JWTError, jwt
+from fastapi.security import OAuth2PasswordBearer
+from fastapi import Depends, HTTPException, status
+from typing import Optional
+from datetime import datetime
 
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+def _bcrypt_safe(password: str) -> str:
+    if password is None:
+        raise ValueError("Password is None")
+
+    password = str(password).strip()
+
+    # Enforce bcrypt max length safely (72 bytes)
+    if len(password.encode("utf-8")) > 72:
+        password = password.encode(
+            "utf-8")[:72].decode("utf-8", errors="ignore")
+
+    return password
+
+
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
@@ -24,14 +36,12 @@ def get_db():
         db.close()
 
 
-def verify_password(plain_password: str, password_hash: str) -> bool:
-    return pwd_context.verify(plain_password, password_hash)
-
-
 def hash_password(password: str) -> str:
-    # Truncate password to 72 bytes for bcrypt compatibility
-    password_bytes = password.encode('utf-8')[:72]
-    return pwd_context.hash(password_bytes.decode('utf-8', errors='ignore'))
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def create_access_token(data: dict) -> str:
@@ -62,7 +72,8 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
+        payload = jwt.decode(token, config.SECRET_KEY,
+                             algorithms=[config.ALGORITHM])
         sub: Optional[str] = payload.get("sub")
         if sub is None:
             raise credentials_exception
@@ -75,4 +86,3 @@ async def get_current_user(
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     return user
-
