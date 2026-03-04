@@ -103,7 +103,10 @@ class User(Base, TimestampMixin):
     preferences: Mapped[Optional[str]] = mapped_column(
         Text, nullable=True)  # JSON string for user preferences
 
-    department: Mapped[Optional["Department"]] = relationship()
+    department: Mapped[Optional["Department"]] = relationship(
+        back_populates="users"
+    )
+
     created_logs: Mapped[list["EquipmentLog"]] = relationship(
         back_populates="created_by_user", cascade="all,delete-orphan"
     )
@@ -142,6 +145,10 @@ class Department(Base, TimestampMixin):
 
     equipment: Mapped[list["Equipment"]] = relationship(
         back_populates="department")
+
+    users: Mapped[list["User"]] = relationship(
+        back_populates="department"
+    )
 
 
 class Supplier(Base, TimestampMixin):
@@ -197,7 +204,7 @@ class Ticket(Base, TimestampMixin):
         String(36), ForeignKey("equipment.id", ondelete="SET NULL"), nullable=True
     )
 
-    # New fields for simplified API
+    # New fields for simplified API (Relationship section)
     title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     priority: Mapped[Optional[str]] = mapped_column(
@@ -209,20 +216,25 @@ class Ticket(Base, TimestampMixin):
         String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
 
-    equipment: Mapped[Optional["Equipment"]
-                      ] = relationship(back_populates="tickets")
-    department: Mapped[Optional["Department"]] = relationship()
-    response: Mapped[Optional["TicketResponse"]] = relationship(
-        back_populates="ticket", cascade="all,delete-orphan", uselist=False
+    equipment: Mapped[Optional["Equipment"]] = relationship(
+        back_populates="tickets"
     )
+
+    department: Mapped[Optional["Department"]] = relationship()
+
+    response: Mapped[Optional["TicketResponse"]] = relationship(
+        back_populates="ticket",
+        cascade="all,delete-orphan",
+        uselist=False
+    )
+
     reported_by_user: Mapped[Optional["User"]] = relationship(
-        foreign_keys=[reported_by_user_id])
+        foreign_keys=[reported_by_user_id]
+    )
+
     assigned_to_user: Mapped[Optional["User"]] = relationship(
-        foreign_keys=[assigned_to_user_id])
-    reported_by_user: Mapped[Optional["User"]] = relationship(
-        foreign_keys=[reported_by_user_id])
-    assigned_to_user: Mapped[Optional["User"]] = relationship(
-        foreign_keys=[assigned_to_user_id])
+        foreign_keys=[assigned_to_user_id]
+    )
 
 
 class Equipment(Base, TimestampMixin):

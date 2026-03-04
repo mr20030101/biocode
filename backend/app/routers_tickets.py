@@ -31,31 +31,36 @@ def list_tickets(
     current_user: User = Depends(get_current_user),
 ):
     query = db.query(Ticket)
-    
+
     # Role-based filtering:
     # - Support only see assigned tickets
     # - Department Incharge only see tickets they created
+
     if current_user.role == UserRole.support:
-        query = query.filter(Ticket.assigned_to_user_id == current_user.id)
+        query = query.filter(
+            (Ticket.assigned_to_user_id == current_user.id) |
+            (Ticket.assigned_to_user_id.is_(None))
+        )
+
     elif current_user.role == UserRole.department_incharge:
         query = query.filter(Ticket.reported_by_user_id == current_user.id)
-    
+
     # Filter by status
     if status:
         query = query.filter(Ticket.status == status)
-    
+
     # Filter by priority
     if priority:
         query = query.filter(Ticket.priority == priority)
-    
+
     # Filter by assigned user
     if assigned_to_user_id:
         query = query.filter(Ticket.assigned_to_user_id == assigned_to_user_id)
-    
+
     # Filter by department
     if department_id:
         query = query.filter(Ticket.department_id == department_id)
-    
+
     # Search by title, ticket code, or description
     if search:
         search_term = f"%{search}%"
@@ -64,14 +69,15 @@ def list_tickets(
             (Ticket.ticket_code.ilike(search_term)) |
             (Ticket.description.ilike(search_term))
         )
-    
+
     # Get total count
     total = query.count()
-    
+
     # Apply pagination
     offset = (page - 1) * page_size
-    tickets_list = query.order_by(Ticket.created_at.desc()).offset(offset).limit(page_size).all()
-    
+    tickets_list = query.order_by(Ticket.created_at.desc()).offset(
+        offset).limit(page_size).all()
+
     # Convert to dict manually to avoid serialization issues
     items = []
     for ticket in tickets_list:
@@ -89,7 +95,7 @@ def list_tickets(
             "created_at": ticket.created_at.isoformat() if ticket.created_at else None,
             "updated_at": ticket.updated_at.isoformat() if ticket.updated_at else None,
         })
-    
+
     return {
         "items": items,
         "total": total,
@@ -106,17 +112,19 @@ def create_ticket(
     current_user: User = Depends(get_current_user),
 ):
     # All authenticated users can create tickets (including viewers)
-    
+
     # Verify equipment exists
-    equipment = db.query(Equipment).filter(Equipment.id == payload.equipment_id).first()
+    equipment = db.query(Equipment).filter(
+        Equipment.id == payload.equipment_id).first()
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
-    
+
     # Generate ticket code
     import random
     import string
-    ticket_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
-    
+    ticket_code = ''.join(random.choices(
+        string.ascii_uppercase + string.digits, k=8))
+
     # Create ticket with both old and new fields for compatibility
     ticket = Ticket(
         ticket_code=ticket_code,
@@ -136,10 +144,10 @@ def create_ticket(
     db.add(ticket)
     db.commit()
     db.refresh(ticket)
-    
+
     # Send notifications to IT staff
     notification_service.notify_ticket_created(db, ticket, current_user)
-    
+
     return ticket
 
 
@@ -149,10 +157,15 @@ def get_ticket(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
+
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return ticket
+
+    if current_user.role == UserRole.support and ticket.assigned_to_user_id not in [None, current_user.id]:
+        raise HTTPException(
+            status_code=404, detail="not authorized to view this ticket")
 
 
 @router.patch("/{ticket_id}", response_model=TicketOut)
@@ -165,17 +178,17 @@ def update_ticket(
     ticket = db.query(Ticket).filter(Ticket.id == ticket_id).first()
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    
+
     # Track old values for notifications
     old_status = ticket.status
     old_assigned_to = ticket.assigned_to_user_id
-    
+
     update_data = payload.dict(exclude_unset=True)
-    
+
     # Check if trying to resolve or close ticket
     if "status" in update_data:
         new_status = update_data["status"]
-        
+
         # Viewers cannot resolve or close tickets
         if new_status in [TicketStatus.resolved, TicketStatus.closed]:
             if not can_resolve_or_close_ticket(current_user):
@@ -183,7 +196,7 @@ def update_ticket(
                     status_code=403,
                     detail="Viewers cannot resolve or close tickets"
                 )
-        
+
         # Only supervisors can close tickets
         if new_status == TicketStatus.closed:
             if not can_close_ticket(current_user):
@@ -191,34 +204,37 @@ def update_ticket(
                     status_code=403,
                     detail="Only supervisors can close tickets"
                 )
-    
+
     # Apply updates
     for field, value in update_data.items():
         setattr(ticket, field, value)
-    
+
     # Increment repair_count when ticket is marked as resolved or closed
     new_status = ticket.status
     if old_status != new_status and new_status in [TicketStatus.resolved, TicketStatus.closed]:
         if ticket.equipment_id:
-            equipment = db.query(Equipment).filter(Equipment.id == ticket.equipment_id).first()
+            equipment = db.query(Equipment).filter(
+                Equipment.id == ticket.equipment_id).first()
             if equipment:
                 equipment.repair_count += 1
-    
+
     db.commit()
     db.refresh(ticket)
-    
+
     # Send notifications
     # Notify if status changed
     if old_status != ticket.status:
         notification_service.notify_ticket_status_changed(
             db, ticket, old_status.value, ticket.status.value, current_user
         )
-    
+
     # Notify if assigned to someone
     if "assigned_to_user_id" in update_data and ticket.assigned_to_user_id:
         if old_assigned_to != ticket.assigned_to_user_id:
-            assigned_user = db.query(User).filter(User.id == ticket.assigned_to_user_id).first()
+            assigned_user = db.query(User).filter(
+                User.id == ticket.assigned_to_user_id).first()
             if assigned_user:
-                notification_service.notify_ticket_assigned(db, ticket, assigned_user, current_user)
-    
+                notification_service.notify_ticket_assigned(
+                    db, ticket, assigned_user, current_user)
+
     return ticket
