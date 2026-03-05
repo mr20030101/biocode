@@ -86,6 +86,7 @@ class EquipmentBase(BaseModel):
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     serial_number: Optional[str] = None
+    supplier_name: Optional[str] = None
     acquisition_date: Optional[datetime] = None
     acquired_value: Optional[str] = None
     status: EquipmentStatus = EquipmentStatus.active
@@ -102,8 +103,15 @@ class EquipmentOut(EquipmentBase):
     id: str
     location_id: Optional[str] = None
     in_service_date: Optional[datetime] = None
+    supplier_name: Optional[str]
     notes: Optional[str] = None
     repair_count: int = 0
+
+    # 🔥 Phase 2 Health Engine fields
+    max_operating_hours: Optional[int] = None
+    current_operating_hours: Optional[int] = None
+    remaining_operating_months: Optional[float] = None
+    health_status: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -234,6 +242,24 @@ class NotificationOut(NotificationBase):
     is_read: bool
     created_at: datetime
     read_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MachineHourReadingBase(BaseModel):
+    equipment_id: str
+    reading_hours: int
+    reading_date: datetime
+
+
+class MachineHourReadingCreate(MachineHourReadingBase):
+    pass
+
+
+class MachineHourReadingOut(MachineHourReadingBase):
+    id: str
+    created_at: datetime
 
     class Config:
         from_attributes = True

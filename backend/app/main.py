@@ -4,13 +4,13 @@ from .routers_reports import router as reports_router
 from .routers_analytics import router as analytics_router
 from .routers_maintenance import router as maintenance_router
 from .routers_tickets import router as tickets_router
-from .routers_suppliers import router as suppliers_router
+
 from .routers_departments import router as departments_router
 from .routers_equipment import router as equipment_router
 from .routers_auth import router as auth_router
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from .routers_machine_readings import router as machine_readings_router
 
 app = FastAPI(title="Biocode Biomedical Equipment API")
 
@@ -31,13 +31,14 @@ app.add_middleware(
 app.include_router(auth_router)
 app.include_router(equipment_router)
 app.include_router(departments_router)
-app.include_router(suppliers_router)
+
 app.include_router(tickets_router)
 app.include_router(maintenance_router)
 app.include_router(analytics_router)
 app.include_router(reports_router)
 app.include_router(notifications_router)
 app.include_router(user_preferences_router)
+app.include_router(machine_readings_router)
 
 
 @app.get("/health")

@@ -151,23 +151,6 @@ class Department(Base, TimestampMixin):
     )
 
 
-class Supplier(Base, TimestampMixin):
-    __tablename__ = "suppliers"
-
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=_uuid_str)
-    name: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
-    code: Mapped[Optional[str]] = mapped_column(
-        String(64), nullable=True, unique=True)
-    contact_person: Mapped[Optional[str]] = mapped_column(
-        String(255), nullable=True)
-    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
-    address: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    website: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
-    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-
-
 class Ticket(Base, TimestampMixin):
     """
     Support ticket corresponding to the CLI script tickets.
@@ -258,44 +241,102 @@ class Equipment(Base, TimestampMixin):
     acquisition_date: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True)
     acquired_value: Mapped[Optional[str]] = mapped_column(
-        String(50), nullable=True)  # Store as string to handle currency
+        String(50), nullable=True)
 
     status: Mapped[EquipmentStatus] = mapped_column(
         Enum(EquipmentStatus), nullable=False, default=EquipmentStatus.active
     )
+
     location_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("locations.id", ondelete="SET NULL"), nullable=True
     )
+
     department_id: Mapped[Optional[str]] = mapped_column(
         String(36), ForeignKey("departments.id", ondelete="SET NULL"), nullable=True
     )
 
     in_service_date: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True)
+
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     repair_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0)
+
+    # Dialysis lifecycle configuration
+    max_operating_hours: Mapped[Optional[int]] = mapped_column(
+        Integer, nullable=True
+    )
+
+    # Equipment's Supplier
+    supplier_name: Mapped[Optional[str]] = mapped_column(String(150))
 
     # Downtime tracking
     total_downtime_minutes: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0)
+
     last_downtime_start: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True)
+
     is_currently_down: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, index=True)
-    criticality: Mapped[str] = mapped_column(String(
-        20), nullable=False, default="medium", index=True)  # low, medium, high, critical
+
+    criticality: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="medium", index=True)
 
     location: Mapped[Optional[Location]] = relationship(
         back_populates="equipment")
+
     department: Mapped[Optional[Department]] = relationship(
         back_populates="equipment")
+
     logs: Mapped[list["EquipmentLog"]] = relationship(
         back_populates="equipment", cascade="all,delete-orphan"
     )
+
     tickets: Mapped[list["Ticket"]] = relationship(
         back_populates="equipment", cascade="all,delete-orphan"
     )
+
+    # 🔥 NEW RELATIONSHIP (Phase 2 Dialysis Engine)
+    readings: Mapped[list["MachineHourReading"]] = relationship(
+        back_populates="equipment",
+        cascade="all, delete-orphan"
+    )
+
+    # Dialysis Health Engine
+    @property
+    def current_operating_hours(self) -> Optional[int]:
+        if not self.readings:
+            return None
+        return max(r.reading_hours for r in self.readings)
+
+    @property
+    def remaining_operating_months(self) -> Optional[float]:
+        if not self.max_operating_hours:
+            return None
+
+        current = self.current_operating_hours
+        if current is None:
+            return None
+
+        remaining_hours = max(self.max_operating_hours - current, 0)
+        return round(remaining_hours / 360, 1)
+
+    @property
+    def health_status(self) -> str:
+        months = self.remaining_operating_months
+
+        if months is None:
+            return "unknown"
+        if months > 12:
+            return "healthy"
+        elif months > 6:
+            return "warning"
+        elif months > 3:
+            return "attention"
+        else:
+            return "critical"
 
     __table_args__ = (
         UniqueConstraint("asset_tag", name="uq_equipment_asset_tag"),
@@ -304,41 +345,74 @@ class Equipment(Base, TimestampMixin):
     )
 
 
+class MachineHourReading(Base, TimestampMixin):
+    __tablename__ = "machine_hour_readings"
+
+    id: Mapped[str] = mapped_column(
+        String(36), primary_key=True, default=_uuid_str
+    )
+
+    equipment_id: Mapped[str] = mapped_column(
+        String(36),
+        ForeignKey("equipment.id", ondelete="CASCADE"),
+        nullable=False
+    )
+
+    reading_hours: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    reading_date: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False
+    )
+
+    equipment: Mapped["Equipment"] = relationship(
+        back_populates="readings"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("equipment_id", "reading_date",
+                         name="uq_equipment_reading_date"),
+    )
+
+# 🔧 Equipment Logs (inspection, calibration, service notes)
+
+
 class EquipmentLog(Base, TimestampMixin):
     __tablename__ = "equipment_logs"
 
     id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=_uuid_str)
+        String(36), primary_key=True, default=_uuid_str
+    )
 
     equipment_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("equipment.id", ondelete="CASCADE"), nullable=False, index=True
+        String(36),
+        ForeignKey("equipment.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True
     )
+
     created_by_user_id: Mapped[Optional[str]] = mapped_column(
-        String(36), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True
+        String(36),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True
     )
 
     log_type: Mapped[LogType] = mapped_column(
-        Enum(LogType), nullable=False, index=True)
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+        Enum(LogType),
+        nullable=False
+    )
 
-    # Optional operational fields
-    occurred_at: Mapped[Optional[datetime]] = mapped_column(
-        DateTime(timezone=True), nullable=True)
-    downtime_minutes: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0)
-    resolved: Mapped[bool] = mapped_column(
-        Boolean, nullable=False, default=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text)
 
-    equipment: Mapped[Equipment] = relationship(back_populates="logs")
-    created_by_user: Mapped[Optional[User]] = relationship(
-        back_populates="created_logs")
+    equipment: Mapped["Equipment"] = relationship(
+        back_populates="logs"
+    )
 
-    __table_args__ = (
-        CheckConstraint("downtime_minutes >= 0",
-                        name="ck_equipment_logs_downtime_nonneg"),
-        Index("ix_equipment_logs_equipment_type", "equipment_id", "log_type"),
-        Index("ix_equipment_logs_occurred_at", "occurred_at"),
+    created_by_user: Mapped[Optional["User"]] = relationship(
+        back_populates="created_logs"
     )
 
 
