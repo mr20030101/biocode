@@ -20,6 +20,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
+class LifecycleType(str, enum.Enum):
+    hours = "hours"
+    years = "years"
+
+
 def _uuid_str() -> str:
     return str(uuid.uuid4())
 
@@ -232,7 +237,7 @@ class Equipment(Base, TimestampMixin):
         String(128), nullable=True)
 
     # Description
-    device_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    equipment_name: Mapped[str] = mapped_column(String(255), nullable=False)
     manufacturer: Mapped[Optional[str]] = mapped_column(
         String(255), nullable=True)
     model: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -263,9 +268,32 @@ class Equipment(Base, TimestampMixin):
     repair_count: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0)
 
+    # Manual override for repair alert decisions
+    repair_alert_override: Mapped[Optional[str]] = mapped_column(
+        String(20),
+        nullable=True
+    )
+
+    last_pm_date: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True
+    )
+
     # Dialysis lifecycle configuration
     max_operating_hours: Mapped[Optional[int]] = mapped_column(
         Integer, nullable=True
+    )
+
+    # Lifecycle configuration (Phase 3 preparation)
+    lifecycle_type: Mapped[LifecycleType] = mapped_column(
+        Enum(LifecycleType),
+        nullable=False,
+        default=LifecycleType.hours
+    )
+
+    lifecycle_years: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True
     )
 
     # Equipment's Supplier
@@ -307,40 +335,196 @@ class Equipment(Base, TimestampMixin):
     # Dialysis Health Engine
     @property
     def current_operating_hours(self) -> Optional[int]:
+        """
+        Returns the latest machine hour reading.
+        """
         if not self.readings:
             return None
-        return max(r.reading_hours for r in self.readings)
+
+        values = [
+            r.reading_hours for r in self.readings if r.reading_hours is not None]
+
+        if not values:
+            return None
+
+        return max(values)
 
     @property
     def remaining_operating_months(self) -> Optional[float]:
-        if not self.max_operating_hours:
-            return None
+        """
+        Calculates remaining equipment life in months.
+        """
 
-        current = self.current_operating_hours
-        if current is None:
-            return None
+        # HOURS lifecycle (dialysis machines)
+        if self.lifecycle_type == LifecycleType.hours:
 
-        remaining_hours = max(self.max_operating_hours - current, 0)
-        return round(remaining_hours / 360, 1)
+            if not self.max_operating_hours:
+                return None
+
+            current = self.current_operating_hours
+            if current is None:
+                return None
+
+            remaining_hours = max(self.max_operating_hours - current, 0)
+
+            return round(remaining_hours / 360, 1)
+
+        # YEARS lifecycle (other equipment)
+        if self.lifecycle_type == LifecycleType.years:
+
+            if not self.lifecycle_years or not self.in_service_date:
+                return None
+
+            days_used = (datetime.utcnow() - self.in_service_date).days
+            months_used = days_used / 30
+
+            total_months = self.lifecycle_years * 12
+
+            remaining_months = max(total_months - months_used, 0)
+
+            return round(remaining_months, 1)
+
+        return None
 
     @property
-    def health_status(self) -> str:
+    def health_status(self) -> Optional[str]:
+        return self.alert_level
+
+    @property
+    def health_score(self) -> Optional[int]:
+        """
+        Advanced health score based on lifecycle, repairs, and downtime.
+        """
+
         months = self.remaining_operating_months
 
         if months is None:
-            return "unknown"
-        if months > 12:
-            return "healthy"
-        elif months > 6:
-            return "warning"
-        elif months > 3:
-            return "attention"
+            return None
+
+        # Determine total lifecycle months
+        if self.lifecycle_type == LifecycleType.hours:
+            if not self.max_operating_hours:
+                return None
+            total_months = self.max_operating_hours / 360
+
+        elif self.lifecycle_type == LifecycleType.years:
+            if not self.lifecycle_years:
+                return None
+            total_months = self.lifecycle_years * 12
+
         else:
+            return None
+
+        if total_months <= 0:
+            return None
+
+        # Base lifecycle score
+        lifecycle_score = (months / total_months) * 100
+
+        # Repair penalty
+        repair_penalty = min(self.repair_count * 2, 20)
+
+        # Downtime penalty
+        downtime_hours = self.total_downtime_minutes / 60
+        downtime_penalty = min(downtime_hours * 0.5, 15)
+
+        score = lifecycle_score - repair_penalty - downtime_penalty
+
+        return round(max(min(score, 100), 0))
+
+    @property
+    def alert_level(self) -> Optional[str]:
+
+        months = self.remaining_operating_months
+        score = self.health_score
+
+        lifecycle_level = None
+        score_level = None
+
+        # Lifecycle evaluation
+        if months is not None:
+            if months > 12:
+                lifecycle_level = "healthy"
+            elif months > 6:
+                lifecycle_level = "warning"
+            elif months > 3:
+                lifecycle_level = "attention"
+            else:
+                lifecycle_level = "critical"
+
+        # Health score evaluation
+        if score is not None:
+            if score >= 80:
+                score_level = "healthy"
+            elif score >= 60:
+                score_level = "warning"
+            elif score >= 40:
+                score_level = "attention"
+            else:
+                score_level = "critical"
+
+        levels = ["healthy", "warning", "attention", "critical"]
+
+        if lifecycle_level and score_level:
+            return levels[max(levels.index(lifecycle_level), levels.index(score_level))]
+
+        return lifecycle_level or score_level
+
+    @property
+    def risk_level(self) -> Optional[str]:
+        """
+        Determines equipment risk level based on health score.
+        """
+
+        score = self.health_score
+
+        if score is None:
+            return None
+
+        if score <= 30:
             return "critical"
+        elif score <= 50:
+            return "attention"
+        elif score <= 70:
+            return "warning"
+        else:
+            return "healthy"
+
+    @property
+    def risk_priority(self) -> Optional[int]:
+        """
+        Numeric priority used for sorting equipment by risk.
+        Lower number = higher priority.
+        """
+
+        priority_map = {
+            "critical": 1,
+            "attention": 2,
+            "warning": 3,
+            "healthy": 4,
+        }
+
+        return priority_map.get(self.risk_level)
+
+    @property
+    def pm_alert(self) -> Optional[str]:
+        """
+        Detects equipment without preventive maintenance in the last 6 months.
+        """
+
+        if not self.last_pm_date:
+            return "no_pm_record"
+
+        months_since_pm = (datetime.utcnow() - self.last_pm_date).days / 30
+
+        if months_since_pm >= 6:
+            return "pm_required"
+
+        return "ok"
 
     __table_args__ = (
         UniqueConstraint("asset_tag", name="uq_equipment_asset_tag"),
-        Index("ix_equipment_device_name", "device_name"),
+        Index("ix_equipment_equipment_name", "equipment_name"),
         Index("ix_equipment_manufacturer_model", "manufacturer", "model"),
     )
 

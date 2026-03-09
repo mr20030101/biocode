@@ -7,39 +7,22 @@ import { useAuth } from "../lib/auth";
 import { showError, showSuccess } from "../lib/notifications";
 
 type Equipment = {
-  id: string
-  asset_tag: string
-  device_name: string
-  manufacturer?: string
-  model?: string
-  serial_number?: string
-
-  status: string
-
-  // lifecycle
-  current_reading?: number
-  max_operating_hours?: number
-  remaining_operating_months?: number
-  lifecycle_type?: string
-  lifecycle_years?: number
-
-  // 🔧 Biocode Health Engine
-  alert_level?: "normal" | "warning" | "critical"
-  health_status?: "healthy" | "warning" | "critical"
-  health_score?: number
-  risk_level?: string
-  risk_priority?: number
-  pm_alert?: boolean
-
-  repair_count?: number
-  department_id?: string
-  supplier_id?: string
-  location_id?: string
-  acquisition_date?: string
-  acquired_value?: string
-  in_service_date?: string
-  notes?: string
-}
+  id: string;
+  asset_tag: string;
+  device_name: string;
+  manufacturer?: string | null;
+  model?: string | null;
+  serial_number?: string | null;
+  supplier_id?: string | null;
+  acquisition_date?: string | null;
+  acquired_value?: string | null;
+  status: string;
+  department_id?: string | null;
+  location_id?: string | null;
+  in_service_date?: string | null;
+  notes?: string | null;
+  repair_count: number;
+};
 
 type Department = {
   id: string;
@@ -78,24 +61,24 @@ export function EquipmentPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
-
+  
   // Full edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [editForm, setEditForm] = useState<Partial<Equipment>>({});
-
+  
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [pageSize] = useState(20);
-
+  
   // Filter states
   const [showFilters, setShowFilters] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [filterDepartment, setFilterDepartment] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState<string>("");
-
+  
   // View mode state - load from user preferences
   const [viewMode, setViewMode] = useState<"table" | "horizontal" | "grid">(() => {
     // Try to load from user preferences in localStorage
@@ -110,17 +93,16 @@ export function EquipmentPage() {
     }
     return "horizontal";
   });
-
-
+  
   // Delete modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletingEquipment, setDeletingEquipment] = useState<Equipment | null>(null);
   const [deleting, setDeleting] = useState(false);
-
+  
   // View modal state
   const [showViewModal, setShowViewModal] = useState(false);
   const [viewingEquipment, setViewingEquipment] = useState<Equipment | null>(null);
-
+  
   // Quick status edit modal state
   const [showQuickEditModal, setShowQuickEditModal] = useState(false);
   const [quickEditEquipment, setQuickEditEquipment] = useState<Equipment | null>(null);
@@ -172,7 +154,7 @@ export function EquipmentPage() {
   const loadEquipment = async () => {
     try {
       setLoading(true);
-
+      
       // Build query params
       const params = new URLSearchParams();
       if (filterStatus) params.append("status", filterStatus);
@@ -180,10 +162,10 @@ export function EquipmentPage() {
       if (searchQuery) params.append("search", searchQuery);
       params.append("page", currentPage.toString());
       params.append("page_size", pageSize.toString());
-
+      
       const queryString = params.toString();
       const url = `/equipment/?${queryString}`;
-
+      
       const data = await apiFetch<PaginatedResponse>(url);
       setItems(data.items);
       setTotalPages(data.total_pages);
@@ -207,43 +189,6 @@ export function EquipmentPage() {
     const dept = departments.find(d => d.id === departmentId);
     return dept ? dept.name : "-";
   };
-
-
-  const renderHealthBadge = (e: Equipment) => {
-
-    if (e.health_status === "healthy") {
-      return (
-        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-700">
-          🟢 Healthy
-        </span>
-      );
-    }
-
-    if (e.health_status === "warning") {
-      return (
-        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-700">
-          🟡 Warning
-        </span>
-      );
-    }
-
-    if (e.health_status === "critical") {
-      return (
-        <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700">
-          🔴 Critical
-        </span>
-      );
-    }
-
-    return (
-      <span className="px-3 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-500">
-        —
-      </span>
-    );
-  };
-
-
-
 
   const handleDeleteClick = (equipment: Equipment) => {
     setDeletingEquipment(equipment);
@@ -330,7 +275,7 @@ export function EquipmentPage() {
     try {
       // Format dates properly
       const payload: any = { ...editForm };
-
+      
       // Convert empty strings to null for optional fields
       Object.keys(payload).forEach(key => {
         if (payload[key] === "") {
@@ -343,7 +288,7 @@ export function EquipmentPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
+      
       setShowEditModal(false);
       setEditingEquipment(null);
       setEditForm({});
@@ -377,10 +322,11 @@ export function EquipmentPage() {
             <div className="flex bg-white rounded-lg shadow-sm border border-gray-200 p-1">
               <button
                 onClick={() => setViewMode("table")}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${viewMode === "table"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
+                  viewMode === "table"
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
                 title="Table View"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -390,10 +336,11 @@ export function EquipmentPage() {
               </button>
               <button
                 onClick={() => setViewMode("horizontal")}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${viewMode === "horizontal"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
+                  viewMode === "horizontal"
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
                 title="Horizontal Cards"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -403,10 +350,11 @@ export function EquipmentPage() {
               </button>
               <button
                 onClick={() => setViewMode("grid")}
-                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${viewMode === "grid"
-                  ? "bg-blue-100 text-blue-700"
-                  : "text-gray-600 hover:text-gray-900"
-                  }`}
+                className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center space-x-1 ${
+                  viewMode === "grid"
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
                 title="Grid View"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -415,7 +363,7 @@ export function EquipmentPage() {
                 <span className="hidden sm:inline">Grid</span>
               </button>
             </div>
-
+            
             <button
               onClick={() => setShowFilters(!showFilters)}
               className="btn-secondary flex items-center space-x-2"
@@ -425,7 +373,7 @@ export function EquipmentPage() {
               </svg>
               <span>{showFilters ? "Hide Filters" : "Show Filters"}</span>
             </button>
-
+            
             {/* Only show Add Equipment button for supervisor and super_admin */}
             {auth.canCreateEquipment() && (
               <Link to="/equipment/new">
@@ -457,7 +405,7 @@ export function EquipmentPage() {
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
                 />
               </div>
-
+              
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Status
@@ -473,7 +421,7 @@ export function EquipmentPage() {
                   <option value="retired">Retired</option>
                 </select>
               </div>
-
+              
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   Department
@@ -492,7 +440,7 @@ export function EquipmentPage() {
                 </select>
               </div>
             </div>
-
+            
             {(filterStatus || filterDepartment || searchQuery) && (
               <div className="mt-4 flex items-center justify-between">
                 <p className="text-sm text-gray-600">
@@ -531,97 +479,66 @@ export function EquipmentPage() {
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Device
                         </th>
-
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Asset Tag
                         </th>
-
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Manufacturer
                         </th>
-
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Status
                         </th>
-
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Health
-                        </th>
-
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Repairs
                         </th>
-
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
-
                     <tbody className="bg-white divide-y divide-gray-200">
                       {items.map((e) => (
                         <tr key={e.id} className="hover:bg-gray-50 transition-colors">
-
-                          {/* Device */}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="font-medium text-gray-900">{e.device_name}</div>
                             <div className="text-sm text-gray-500">{e.model || "-"}</div>
                           </td>
-
-                          {/* Asset Tag */}
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {e.asset_tag}
                           </td>
-
-                          {/* Manufacturer */}
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             {e.manufacturer || "-"}
                           </td>
-
-                          {/* Status */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`px-3 py-1 text-xs font-medium rounded-full ${e.status === "active"
-                                ? "bg-green-100 text-green-700"
-                                : e.status === "out_of_service"
-                                  ? "bg-orange-100 text-orange-700"
-                                  : "bg-gray-100 text-gray-700"
-                                }`}
-                            >
+                            <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                              e.status === 'active' 
+                                ? 'bg-green-100 text-green-700' 
+                                : e.status === 'out_of_service'
+                                ? 'bg-orange-100 text-orange-700'
+                                : 'bg-gray-100 text-gray-700'
+                            }`}>
                               {e.status.replace("_", " ").toUpperCase()}
                             </span>
                           </td>
-
-                          {/* Health Status */}
                           <td className="px-6 py-4 whitespace-nowrap">
-                            {renderHealthBadge(e)}
-                          </td>
-
-                          {/* Repairs */}
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`text-sm font-semibold ${e.repair_count === 0
-                                ? "text-green-700"
+                            <span className={`text-sm font-semibold ${
+                              e.repair_count === 0
+                                ? 'text-green-700'
                                 : e.repair_count <= 2
-                                  ? "text-orange-700"
-                                  : "text-red-700"
-                                }`}
-                            >
+                                ? 'text-orange-700'
+                                : 'text-red-700'
+                            }`}>
                               {e.repair_count}
                             </span>
                           </td>
-
-                          {/* Actions */}
                           <td className="px-6 py-4 whitespace-nowrap text-sm">
                             <div className="flex items-center space-x-2">
-
                               <button
                                 onClick={() => handleViewClick(e)}
                                 className="text-blue-600 hover:text-blue-700 font-medium"
                               >
                                 View
                               </button>
-
                               {auth.canCreateEquipment() && (
                                 <button
                                   onClick={() => handleFullEditClick(e)}
@@ -630,7 +547,6 @@ export function EquipmentPage() {
                                   Edit
                                 </button>
                               )}
-
                               {auth.canUpdateEquipmentStatus() && (
                                 <button
                                   onClick={() => handleQuickEditClick(e)}
@@ -639,7 +555,6 @@ export function EquipmentPage() {
                                   Status
                                 </button>
                               )}
-
                               {auth.isSuperAdmin() && (
                                 <button
                                   onClick={() => handleDeleteClick(e)}
@@ -648,10 +563,8 @@ export function EquipmentPage() {
                                   Delete
                                 </button>
                               )}
-
                             </div>
                           </td>
-
                         </tr>
                       ))}
                     </tbody>
@@ -664,133 +577,148 @@ export function EquipmentPage() {
             {viewMode === "horizontal" && (
               <div className="space-y-4 mb-8">
                 {items.map((e) => (
-                  <div
-                    key={e.id}
-                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex flex-col lg:flex-row">
-
-                      {/* Left Panel */}
-                      <div
-                        className={`p-6 lg:w-1/3 border-b lg:border-b-0 lg:border-r ${e.status === "active"
-                          ? "bg-gradient-to-br from-green-50 to-green-100 border-green-200"
-                          : e.status === "out_of_service"
-                            ? "bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200"
-                            : "bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200"
-                          }`}
-                      >
-                        <div className="flex items-center space-x-3 mb-3">
-                          <div
-                            className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${e.status === "active"
-                              ? "bg-green-500"
-                              : e.status === "out_of_service"
-                                ? "bg-orange-500"
-                                : "bg-gray-500"
-                              }`}
-                          >
-                            <svg
-                              className="w-7 h-7 text-white"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"
-                              />
-                            </svg>
-                          </div>
-
-                          <div className="flex-1">
-                            <h3 className="text-lg font-bold text-gray-900">
-                              {e.device_name}
-                            </h3>
-                            <p className="text-sm text-gray-600 font-medium">
-                              {e.asset_tag}
-                            </p>
-                          </div>
+                <div key={e.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="flex flex-col lg:flex-row">
+                    {/* Left side - Equipment Info */}
+                    <div className={`p-6 lg:w-1/3 border-b lg:border-b-0 lg:border-r ${
+                      e.status === 'active' 
+                        ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-200' 
+                        : e.status === 'out_of_service'
+                        ? 'bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200'
+                        : 'bg-gradient-to-br from-gray-50 to-gray-100 border-gray-200'
+                    }`}>
+                      <div className="flex items-center space-x-3 mb-3">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-lg ${
+                          e.status === 'active' 
+                            ? 'bg-green-500' 
+                            : e.status === 'out_of_service'
+                            ? 'bg-orange-500'
+                            : 'bg-gray-500'
+                        }`}>
+                          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                          </svg>
                         </div>
-
-                        <div className="space-y-2 text-sm">
-
-                          {/* Status */}
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Status:</span>
-                            <span
-                              className={`px-2.5 py-1 text-xs font-semibold rounded-full ${e.status === "active"
-                                ? "bg-green-200 text-green-800"
-                                : e.status === "out_of_service"
-                                  ? "bg-orange-200 text-orange-800"
-                                  : "bg-gray-200 text-gray-800"
-                                }`}
-                            >
-                              {e.status.replace("_", " ").toUpperCase()}
-                            </span>
-                          </div>
-
-                          {/* Repairs */}
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Repairs:</span>
-                            <span
-                              className={`font-bold ${e.repair_count === 0
-                                ? "text-green-700"
-                                : e.repair_count <= 2
-                                  ? "text-orange-700"
-                                  : "text-red-700"
-                                }`}
-                            >
-                              {e.repair_count}
-                            </span>
-                          </div>
-
-                          {/* Lifecycle */}
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Health:</span>
-                            {renderHealthBadge(e)}
-                          </div>
+                        <div className="flex-1">
+                          <h3 className="text-lg font-bold text-gray-900 leading-tight">{e.device_name}</h3>
+                          <p className="text-sm text-gray-600 font-medium">{e.asset_tag}</p>
                         </div>
                       </div>
-
-                      {/* Right Panel */}
-                      <div className="p-6 lg:w-2/3">
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <p className="text-xs text-gray-500">Manufacturer</p>
-                            <p className="text-sm font-medium text-gray-900">
-                              {e.manufacturer || "Not specified"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-gray-500">Model</p>
-                            <p className="text-sm font-medium text-gray-900">
-                              {e.model || "Not specified"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-gray-500">Serial</p>
-                            <p className="text-sm font-medium text-gray-900">
-                              {e.serial_number || "Not specified"}
-                            </p>
-                          </div>
-
-                          <div>
-                            <p className="text-xs text-gray-500">Department</p>
-                            <p className="text-sm font-medium text-gray-900">
-                              {getDepartmentName(e.department_id)}
-                            </p>
-                          </div>
+                      
+                      <div className="space-y-2 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                            e.status === 'active' 
+                              ? 'bg-green-200 text-green-800' 
+                              : e.status === 'out_of_service'
+                              ? 'bg-orange-200 text-orange-800'
+                              : 'bg-gray-200 text-gray-800'
+                          }`}>
+                            {e.status.replace("_", " ").toUpperCase()}
+                          </span>
                         </div>
-
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Repairs:</span>
+                          <span className={`font-bold ${
+                            e.repair_count === 0
+                              ? 'text-green-700'
+                              : e.repair_count <= 2
+                              ? 'text-orange-700'
+                              : 'text-red-700'
+                          }`}>
+                            {e.repair_count} {e.repair_count === 1 ? 'time' : 'times'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Right side - Details & Actions */}
+                    <div className="p-6 lg:w-2/3">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                            Manufacturer
+                          </label>
+                          <p className="text-sm text-gray-900 font-medium">{e.manufacturer || "Not specified"}</p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                            Model
+                          </label>
+                          <p className="text-sm text-gray-900 font-medium">{e.model || "Not specified"}</p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                            Serial Number
+                          </label>
+                          <p className="text-sm text-gray-900 font-medium">{e.serial_number || "Not specified"}</p>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                            Department
+                          </label>
+                          <p className="text-sm text-gray-900 font-medium">{getDepartmentName(e.department_id)}</p>
+                        </div>
+                      </div>
+                      
+                      {/* Actions */}
+                      <div className="flex flex-wrap gap-2 pt-4 border-t border-gray-200">
+                        <button
+                          onClick={() => handleViewClick(e)}
+                          className="px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors font-medium text-sm flex items-center space-x-1"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span>View</span>
+                        </button>
+                        
+                        {auth.canCreateEquipment() && (
+                          <button
+                            onClick={() => handleFullEditClick(e)}
+                            className="px-4 py-2 bg-indigo-50 text-indigo-700 rounded-lg hover:bg-indigo-100 transition-colors font-medium text-sm flex items-center space-x-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            <span>Edit</span>
+                          </button>
+                        )}
+                        
+                        {auth.canUpdateEquipmentStatus() && (
+                          <button
+                            onClick={() => handleQuickEditClick(e)}
+                            className="px-4 py-2 bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors font-medium text-sm flex items-center space-x-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                            </svg>
+                            <span>Quick Edit</span>
+                          </button>
+                        )}
+                        
+                        {auth.isSuperAdmin() && (
+                          <button
+                            onClick={() => handleDeleteClick(e)}
+                            className="px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors font-medium text-sm flex items-center space-x-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            <span>Delete</span>
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              ))}
+            </div>
             )}
 
             {/* Grid View */}
@@ -799,19 +727,21 @@ export function EquipmentPage() {
                 {items.map((e) => (
                   <div key={e.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                     {/* Header with gradient */}
-                    <div className={`p-6 ${e.status === 'active'
-                      ? 'bg-gradient-to-br from-green-50 to-green-100'
-                      : e.status === 'out_of_service'
+                    <div className={`p-6 ${
+                      e.status === 'active' 
+                        ? 'bg-gradient-to-br from-green-50 to-green-100' 
+                        : e.status === 'out_of_service'
                         ? 'bg-gradient-to-br from-orange-50 to-orange-100'
                         : 'bg-gradient-to-br from-gray-50 to-gray-100'
-                      }`}>
+                    }`}>
                       <div className="flex items-center justify-center mb-3">
-                        <div className={`w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ${e.status === 'active'
-                          ? 'bg-green-500'
-                          : e.status === 'out_of_service'
+                        <div className={`w-16 h-16 rounded-xl flex items-center justify-center shadow-lg ${
+                          e.status === 'active' 
+                            ? 'bg-green-500' 
+                            : e.status === 'out_of_service'
                             ? 'bg-orange-500'
                             : 'bg-gray-500'
-                          }`}>
+                        }`}>
                           <svg className="w-9 h-9 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                           </svg>
@@ -820,50 +750,52 @@ export function EquipmentPage() {
                       <h3 className="text-center text-lg font-bold text-gray-900 mb-1">{e.device_name}</h3>
                       <p className="text-center text-sm text-gray-600 font-medium">{e.asset_tag}</p>
                     </div>
-
+                    
                     {/* Content */}
                     <div className="p-6">
                       <div className="space-y-3 mb-4">
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-500">Status:</span>
-                          <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${e.status === 'active'
-                            ? 'bg-green-100 text-green-700'
-                            : e.status === 'out_of_service'
+                          <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                            e.status === 'active' 
+                              ? 'bg-green-100 text-green-700' 
+                              : e.status === 'out_of_service'
                               ? 'bg-orange-100 text-orange-700'
                               : 'bg-gray-100 text-gray-700'
-                            }`}>
+                          }`}>
                             {e.status.replace("_", " ").toUpperCase()}
                           </span>
                         </div>
-
+                        
                         <div className="flex items-center justify-between text-sm">
                           <span className="text-gray-500">Repairs:</span>
-                          <span className={`font-bold ${e.repair_count === 0
-                            ? 'text-green-700'
-                            : e.repair_count <= 2
+                          <span className={`font-bold ${
+                            e.repair_count === 0
+                              ? 'text-green-700'
+                              : e.repair_count <= 2
                               ? 'text-orange-700'
                               : 'text-red-700'
-                            }`}>
+                          }`}>
                             {e.repair_count}
                           </span>
                         </div>
-
+                        
                         <div className="pt-2 border-t border-gray-200">
                           <p className="text-xs text-gray-500 mb-1">Manufacturer</p>
                           <p className="text-sm text-gray-900 font-medium truncate">{e.manufacturer || "Not specified"}</p>
                         </div>
-
+                        
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Model</p>
                           <p className="text-sm text-gray-900 font-medium truncate">{e.model || "Not specified"}</p>
                         </div>
-
+                        
                         <div>
                           <p className="text-xs text-gray-500 mb-1">Department</p>
                           <p className="text-sm text-gray-900 font-medium truncate">{getDepartmentName(e.department_id)}</p>
                         </div>
                       </div>
-
+                      
                       {/* Actions */}
                       <div className="grid grid-cols-2 gap-2 pt-4 border-t border-gray-200">
                         <button
@@ -876,7 +808,7 @@ export function EquipmentPage() {
                           </svg>
                           <span>View</span>
                         </button>
-
+                        
                         {auth.canCreateEquipment() && (
                           <button
                             onClick={() => handleFullEditClick(e)}
@@ -888,7 +820,7 @@ export function EquipmentPage() {
                             <span>Edit</span>
                           </button>
                         )}
-
+                        
                         {auth.canUpdateEquipmentStatus() && (
                           <button
                             onClick={() => handleQuickEditClick(e)}
@@ -900,7 +832,7 @@ export function EquipmentPage() {
                             <span>Status</span>
                           </button>
                         )}
-
+                        
                         {auth.isSuperAdmin() && (
                           <button
                             onClick={() => handleDeleteClick(e)}
@@ -918,7 +850,7 @@ export function EquipmentPage() {
                 ))}
               </div>
             )}
-
+            
             {/* Pagination */}
             <Pagination
               currentPage={currentPage}
@@ -952,7 +884,7 @@ export function EquipmentPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 ml-3">Quick Edit Status</h3>
               </div>
-
+              
               <p className="text-gray-600 mb-2">
                 Update status for{" "}
                 <span className="font-semibold">{quickEditEquipment.device_name}</span>
@@ -1049,12 +981,13 @@ export function EquipmentPage() {
                 {/* Status */}
                 <div className="border-b border-gray-200 pb-4">
                   <label className="block text-sm font-medium text-gray-500 mb-1">Status</label>
-                  <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${viewingEquipment.status === 'active'
-                    ? 'bg-green-100 text-green-700'
-                    : viewingEquipment.status === 'out_of_service'
+                  <span className={`inline-block px-3 py-1 text-sm font-medium rounded-full ${
+                    viewingEquipment.status === 'active' 
+                      ? 'bg-green-100 text-green-700' 
+                      : viewingEquipment.status === 'out_of_service'
                       ? 'bg-orange-100 text-orange-700'
                       : 'bg-gray-100 text-gray-700'
-                    }`}>
+                  }`}>
                     {viewingEquipment.status.replace("_", " ")}
                   </span>
                 </div>
@@ -1062,12 +995,13 @@ export function EquipmentPage() {
                 {/* Repair Count */}
                 <div className="border-b border-gray-200 pb-4">
                   <label className="block text-sm font-medium text-gray-500 mb-1">Times Fixed</label>
-                  <p className={`text-base font-semibold ${viewingEquipment.repair_count === 0
-                    ? 'text-green-700'
-                    : viewingEquipment.repair_count <= 2
+                  <p className={`text-base font-semibold ${
+                    viewingEquipment.repair_count === 0
+                      ? 'text-green-700'
+                      : viewingEquipment.repair_count <= 2
                       ? 'text-orange-700'
                       : 'text-red-700'
-                    }`}>
+                  }`}>
                     {viewingEquipment.repair_count} {viewingEquipment.repair_count === 1 ? 'time' : 'times'}
                   </p>
                 </div>
@@ -1090,13 +1024,13 @@ export function EquipmentPage() {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto">
             <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 my-8">
               <h3 className="text-xl font-semibold text-gray-900 mb-6">Edit Equipment</h3>
-
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[70vh] overflow-y-auto pr-2">
                 {/* Basic Information */}
                 <div className="md:col-span-2">
                   <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">Basic Information</h4>
                 </div>
-
+                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Device Name <span className="text-red-500">*</span>
@@ -1337,7 +1271,7 @@ export function EquipmentPage() {
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 ml-3">Delete Equipment</h3>
               </div>
-
+              
               <p className="text-gray-600 mb-2">
                 Are you sure you want to delete{" "}
                 <span className="font-semibold">{deletingEquipment.device_name}</span>?
@@ -1371,6 +1305,6 @@ export function EquipmentPage() {
           </div>
         )}
       </div>
-    </Layout >
+    </Layout>
   );
 }

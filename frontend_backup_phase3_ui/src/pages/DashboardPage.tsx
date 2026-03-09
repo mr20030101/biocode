@@ -98,15 +98,14 @@ const COLORS = {
 
 export function DashboardPage() {
   const auth = useAuth();
-
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [criticalEquipment, setCriticalEquipment] = useState<Equipment[]>([]);
   const [techStats, setTechStats] = useState<UserStats | null>(null);
   const [departmentRepairs, setDepartmentRepairs] = useState<DepartmentRepairs[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isTech = String(auth?.user?.role) === "tech";
+  const isTech = auth.user?.role === "tech";
+
   useEffect(() => {
     loadDashboardData();
   }, [auth.user]);
@@ -114,38 +113,24 @@ export function DashboardPage() {
   const loadDashboardData = async () => {
     try {
       setLoading(true);
-
+      
       if (isTech && auth.user?.id) {
         const [ticketsData, statsData] = await Promise.all([
           apiFetch<any>("/tickets/"),
           apiFetch<UserStats>(`/auth/users/${auth.user.id}/stats`),
         ]);
-
         setTickets(ticketsData.items || ticketsData);
         setTechStats(statsData);
-
       } else {
         const [equipmentData, ticketsData, deptRepairsData] = await Promise.all([
           apiFetch<any>("/equipment/"),
           apiFetch<any>("/tickets/"),
           apiFetch<DepartmentRepairs[]>("/analytics/departments/repairs"),
         ]);
-
-        const equipmentList: Equipment[] = equipmentData.items || equipmentData;
-
-        setEquipment(equipmentList);
-
-        // Detect critical machines
-        const critical = equipmentList.filter(
-          (e: any) => e.health_status === "critical"
-        );
-
-        setCriticalEquipment(critical);
-
+        setEquipment(equipmentData.items || equipmentData);
         setTickets(ticketsData.items || ticketsData);
         setDepartmentRepairs(deptRepairsData);
       }
-
     } catch (e: any) {
       console.error("Failed to load dashboard data:", e);
     } finally {
@@ -157,28 +142,18 @@ export function DashboardPage() {
   const activeEquipment = equipment.filter((e) => e.status === "active").length;
   const outOfServiceEquipment = equipment.filter((e) => e.status === "out_of_service").length;
   const retiredEquipment = equipment.filter((e) => e.status === "retired").length;
-
+  
   const openTickets = tickets.filter((t) => t.status === "open").length;
   const inProgressTickets = tickets.filter((t) => t.status === "in_progress").length;
   const resolvedTickets = tickets.filter((t) => t.status === "resolved").length;
   const closedTickets = tickets.filter((t) => t.status === "closed").length;
-
+  
   const highPriorityTickets = tickets.filter((t) => t.priority === "high").length;
   const mediumPriorityTickets = tickets.filter((t) => t.priority === "medium").length;
   const lowPriorityTickets = tickets.filter((t) => t.priority === "low").length;
 
-
-  // Equipment Health Status Counts
-  const healthyEquipment = equipment.filter((e: any) => e.health_status === "healthy").length;
-  const warningEquipment = equipment.filter((e: any) => e.health_status === "warning").length;
-  const criticalEquipmentCount = equipment.filter((e: any) => e.health_status === "critical").length;
-
-
-
-
   // Equipment with most repairs
-  const topRepairEquipment = (equipment || [])
-    .slice()
+  const topRepairEquipment = [...equipment]
     .sort((a, b) => b.repair_count - a.repair_count)
     .slice(0, 5);
 
@@ -235,25 +210,6 @@ export function DashboardPage() {
     ],
   };
 
-
-  // Equipment Health Chart Data
-  const equipmentHealthChartData = {
-    labels: ["Healthy", "Warning", "Critical"],
-    datasets: [
-      {
-        data: [healthyEquipment, warningEquipment, criticalEquipmentCount],
-        backgroundColor: [
-          COLORS.green,
-          COLORS.orange,
-          COLORS.red
-        ],
-        borderWidth: 2,
-        borderColor: "#FFF",
-      },
-    ],
-  };
-
-
   // Ticket Priority Pie Chart Data
   const ticketPriorityChartData = {
     labels: ['High', 'Medium', 'Low'],
@@ -269,15 +225,13 @@ export function DashboardPage() {
 
   // Equipment Repairs Bar Chart Data
   const equipmentRepairsChartData = {
-    labels: topRepairEquipment.map(e =>
-      (e.device_name?.length || 0) > 20
-        ? e.device_name.substring(0, 20) + "..."
-        : e.device_name
+    labels: topRepairEquipment.map(e => 
+      e.device_name.length > 20 ? e.device_name.substring(0, 20) + "..." : e.device_name
     ),
     datasets: [
       {
-        label: "Repairs",
-        data: (topRepairEquipment || []).map(e => e.repair_count),
+        label: 'Repairs',
+        data: topRepairEquipment.map(e => e.repair_count),
         backgroundColor: COLORS.red,
         borderRadius: 8,
       },
@@ -399,17 +353,6 @@ export function DashboardPage() {
                   </div>
                 </div>
 
-                {/* Equipment Health Chart */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                    Equipment Health
-                  </h3>
-                  <div style={{ height: "250px" }}>
-                    <Pie data={equipmentHealthChartData} options={chartOptions} />
-                  </div>
-                </div>
-
-
                 {/* Current Status */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-semibold text-gray-900 mb-6">Current Status</h3>
@@ -478,14 +421,15 @@ export function DashboardPage() {
                         </p>
                       </div>
                       <span
-                        className={`px-3 py-1 text-xs font-medium rounded-full ${t.status === "open"
-                          ? "bg-blue-100 text-blue-700"
-                          : t.status === "in_progress"
+                        className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          t.status === "open"
+                            ? "bg-blue-100 text-blue-700"
+                            : t.status === "in_progress"
                             ? "bg-orange-100 text-orange-700"
                             : t.status === "resolved"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-gray-100 text-gray-700"
-                          }`}
+                            ? "bg-green-100 text-green-700"
+                            : "bg-gray-100 text-gray-700"
+                        }`}
                       >
                         {t.status.replace("_", " ")}
                       </span>
@@ -614,45 +558,11 @@ export function DashboardPage() {
               </div>
             )}
 
-            {/* Critical Equipment Alert */}
-            {!auth.isViewer() && (
-              <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 mb-8">
-                <h3 className="text-lg font-semibold text-red-600 mb-4">
-                  ⚠ Critical Equipment
-                </h3>
-
-                {criticalEquipment.length === 0 ? (
-                  <p className="text-sm text-gray-500">No critical equipment detected.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {criticalEquipment.slice(0, 5).map((eq) => (
-                      <div
-                        key={eq.id}
-                        className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-900">{eq.device_name}</p>
-                          <p className="text-sm text-gray-500">Asset: {eq.asset_tag}</p>
-                        </div>
-                        <span className="text-xs font-semibold text-red-600">
-                          Critical
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-
             {/* Equipment with Most Repairs */}
             {!auth.isViewer() && topRepairEquipment.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Equipment with Most Repairs
-                </h3>
-
-                <div style={{ height: "300px" }}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Equipment with Most Repairs</h3>
+                <div style={{ height: '300px' }}>
                   <Bar data={equipmentRepairsChartData} options={chartOptions} />
                 </div>
               </div>
@@ -663,8 +573,8 @@ export function DashboardPage() {
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">Repairs by Department</h3>
                 <div style={{ height: '350px' }}>
-                  <Bar
-                    data={departmentRepairsChartData}
+                  <Bar 
+                    data={departmentRepairsChartData} 
                     options={{
                       ...chartOptions,
                       indexAxis: 'y' as const,
@@ -684,7 +594,7 @@ export function DashboardPage() {
                           },
                         },
                       },
-                    }}
+                    }} 
                   />
                 </div>
               </div>
@@ -711,12 +621,13 @@ export function DashboardPage() {
                           <p className="font-medium text-gray-900">{e.device_name}</p>
                           <p className="text-sm text-gray-500 mt-1">Asset: {e.asset_tag}</p>
                         </div>
-                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${e.status === 'active'
-                          ? 'bg-green-100 text-green-700'
-                          : e.status === 'out_of_service'
+                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                          e.status === 'active' 
+                            ? 'bg-green-100 text-green-700' 
+                            : e.status === 'out_of_service'
                             ? 'bg-orange-100 text-orange-700'
                             : 'bg-gray-100 text-gray-700'
-                          }`}>
+                        }`}>
                           {e.status.replace("_", " ")}
                         </span>
                       </div>
@@ -748,14 +659,15 @@ export function DashboardPage() {
                           {new Date(t.created_at).toLocaleDateString()}
                         </p>
                       </div>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${t.status === 'open'
-                        ? 'bg-blue-100 text-blue-700'
-                        : t.status === 'in_progress'
+                      <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                        t.status === 'open' 
+                          ? 'bg-blue-100 text-blue-700' 
+                          : t.status === 'in_progress'
                           ? 'bg-orange-100 text-orange-700'
                           : t.status === 'resolved'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
-                        }`}>
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-gray-100 text-gray-700'
+                      }`}>
                         {t.status.replace("_", " ")}
                       </span>
                     </div>

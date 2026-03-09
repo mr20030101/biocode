@@ -98,15 +98,14 @@ const COLORS = {
 
 export function DashboardPage() {
   const auth = useAuth();
-
   const [equipment, setEquipment] = useState<Equipment[]>([]);
   const [tickets, setTickets] = useState<Ticket[]>([]);
-  const [criticalEquipment, setCriticalEquipment] = useState<Equipment[]>([]);
   const [techStats, setTechStats] = useState<UserStats | null>(null);
   const [departmentRepairs, setDepartmentRepairs] = useState<DepartmentRepairs[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const isTech = String(auth?.user?.role) === "tech";
+  const isTech = auth.user?.role === "tech";
+
   useEffect(() => {
     loadDashboardData();
   }, [auth.user]);
@@ -120,32 +119,18 @@ export function DashboardPage() {
           apiFetch<any>("/tickets/"),
           apiFetch<UserStats>(`/auth/users/${auth.user.id}/stats`),
         ]);
-
         setTickets(ticketsData.items || ticketsData);
         setTechStats(statsData);
-
       } else {
         const [equipmentData, ticketsData, deptRepairsData] = await Promise.all([
           apiFetch<any>("/equipment/"),
           apiFetch<any>("/tickets/"),
           apiFetch<DepartmentRepairs[]>("/analytics/departments/repairs"),
         ]);
-
-        const equipmentList: Equipment[] = equipmentData.items || equipmentData;
-
-        setEquipment(equipmentList);
-
-        // Detect critical machines
-        const critical = equipmentList.filter(
-          (e: any) => e.health_status === "critical"
-        );
-
-        setCriticalEquipment(critical);
-
+        setEquipment(equipmentData.items || equipmentData);
         setTickets(ticketsData.items || ticketsData);
         setDepartmentRepairs(deptRepairsData);
       }
-
     } catch (e: any) {
       console.error("Failed to load dashboard data:", e);
     } finally {
@@ -171,7 +156,7 @@ export function DashboardPage() {
   // Equipment Health Status Counts
   const healthyEquipment = equipment.filter((e: any) => e.health_status === "healthy").length;
   const warningEquipment = equipment.filter((e: any) => e.health_status === "warning").length;
-  const criticalEquipmentCount = equipment.filter((e: any) => e.health_status === "critical").length;
+  const criticalEquipment = equipment.filter((e: any) => e.health_status === "critical").length;
 
 
 
@@ -241,7 +226,7 @@ export function DashboardPage() {
     labels: ["Healthy", "Warning", "Critical"],
     datasets: [
       {
-        data: [healthyEquipment, warningEquipment, criticalEquipmentCount],
+        data: [healthyEquipment, warningEquipment, criticalEquipment],
         backgroundColor: [
           COLORS.green,
           COLORS.orange,
@@ -614,45 +599,11 @@ export function DashboardPage() {
               </div>
             )}
 
-            {/* Critical Equipment Alert */}
-            {!auth.isViewer() && (
-              <div className="bg-white rounded-xl shadow-sm border border-red-200 p-6 mb-8">
-                <h3 className="text-lg font-semibold text-red-600 mb-4">
-                  ⚠ Critical Equipment
-                </h3>
-
-                {criticalEquipment.length === 0 ? (
-                  <p className="text-sm text-gray-500">No critical equipment detected.</p>
-                ) : (
-                  <div className="space-y-3">
-                    {criticalEquipment.slice(0, 5).map((eq) => (
-                      <div
-                        key={eq.id}
-                        className="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200"
-                      >
-                        <div>
-                          <p className="font-medium text-gray-900">{eq.device_name}</p>
-                          <p className="text-sm text-gray-500">Asset: {eq.asset_tag}</p>
-                        </div>
-                        <span className="text-xs font-semibold text-red-600">
-                          Critical
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-
             {/* Equipment with Most Repairs */}
             {!auth.isViewer() && topRepairEquipment.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  Equipment with Most Repairs
-                </h3>
-
-                <div style={{ height: "300px" }}>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">Equipment with Most Repairs</h3>
+                <div style={{ height: '300px' }}>
                   <Bar data={equipmentRepairsChartData} options={chartOptions} />
                 </div>
               </div>

@@ -82,7 +82,7 @@ class SupplierOut(SupplierBase):
 
 class EquipmentBase(BaseModel):
     asset_tag: str
-    device_name: str
+    equipment_name: str
     manufacturer: Optional[str] = None
     model: Optional[str] = None
     serial_number: Optional[str] = None
@@ -91,6 +91,12 @@ class EquipmentBase(BaseModel):
     acquired_value: Optional[str] = None
     status: EquipmentStatus = EquipmentStatus.active
     department_id: Optional[str] = None
+    remaining_operating_months: Optional[float]
+    health_score: Optional[int] = None
+    alert_level: Optional[str] = None
+    risk_level: Optional[str] = None
+    risk_priority: Optional[int] = None
+    pm_alert: Optional[str] = None
 
 
 class EquipmentCreate(EquipmentBase):
@@ -107,11 +113,19 @@ class EquipmentOut(EquipmentBase):
     notes: Optional[str] = None
     repair_count: int = 0
 
-    # 🔥 Phase 2 Health Engine fields
+    # 🔥 Health & Risk Engine fields
     max_operating_hours: Optional[int] = None
     current_operating_hours: Optional[int] = None
     remaining_operating_months: Optional[float] = None
+
     health_status: Optional[str] = None
+    health_score: Optional[int] = None
+    alert_level: Optional[str] = None
+
+    risk_level: Optional[str] = None
+    risk_priority: Optional[int] = None
+
+    pm_alert: Optional[str] = None
 
     class Config:
         from_attributes = True
