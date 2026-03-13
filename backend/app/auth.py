@@ -1,29 +1,31 @@
-from .models import User
-from .database import SessionLocal
-from . import config
+from typing import Optional
+from datetime import datetime
+
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 
 from sqlalchemy.orm import Session
+
 from passlib.context import CryptContext
 from jose import JWTError, jwt
 
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi import Depends, HTTPException, status
-
-from typing import Optional
-from datetime import datetime
+from .models.user import User
+from .models.enums import UserRole
+from .database import SessionLocal
+from . import config
 
 
 # =========================================================
 # PASSWORD SAFETY
 # =========================================================
 
-def _bcrypt_safe(password: str) -> str:
+def _safe_password(password: str) -> str:
     if password is None:
         raise ValueError("Password is None")
 
     password = str(password).strip()
 
-    # Enforce bcrypt max length safely (72 bytes)
+    # bcrypt limit safety (72 bytes)
     if len(password.encode("utf-8")) > 72:
         password = password.encode(
             "utf-8")[:72].decode("utf-8", errors="ignore")
@@ -33,12 +35,11 @@ def _bcrypt_safe(password: str) -> str:
 
 pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
-# Swagger + FastAPI OAuth config
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 
 # =========================================================
-# DATABASE
+# DATABASE SESSION
 # =========================================================
 
 def get_db():
@@ -54,11 +55,11 @@ def get_db():
 # =========================================================
 
 def hash_password(password: str) -> str:
-    return pwd_context.hash(_bcrypt_safe(password))
+    return pwd_context.hash(_safe_password(password))
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(_bcrypt_safe(plain_password), hashed_password)
+    return pwd_context.verify(_safe_password(plain_password), hashed_password)
 
 
 # =========================================================
@@ -66,21 +67,24 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 # =========================================================
 
 def create_access_token(data: dict) -> str:
+
     to_encode = data.copy()
 
     expire = datetime.utcnow() + config.get_access_token_expires()
 
     to_encode.update({"exp": expire})
 
-    return jwt.encode(
+    encoded_jwt = jwt.encode(
         to_encode,
         config.SECRET_KEY,
         algorithm=config.ALGORITHM
     )
 
+    return encoded_jwt
+
 
 # =========================================================
-# USER FUNCTIONS
+# USER HELPERS
 # =========================================================
 
 def get_user_by_email(db: Session, email: str) -> Optional[User]:
@@ -101,15 +105,14 @@ def authenticate_user(db: Session, email: str, password: str) -> Optional[User]:
 
 
 # =========================================================
-# LOGIN ENDPOINT FOR SWAGGER (OAUTH2)
+# LOGIN (OAUTH2)
 # =========================================================
 
 def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
 
-    # OAuth uses "username" field — we treat it as email
     user = authenticate_user(db, form_data.username, form_data.password)
 
     if not user:
@@ -123,7 +126,7 @@ def login_for_access_token(
 
     return {
         "access_token": access_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
     }
 
 
@@ -147,18 +150,18 @@ async def get_current_user(
         payload = jwt.decode(
             token,
             config.SECRET_KEY,
-            algorithms=[config.ALGORITHM]
+            algorithms=[config.ALGORITHM],
         )
 
-        sub: Optional[str] = payload.get("sub")
+        user_id: Optional[str] = payload.get("sub")
 
-        if sub is None:
+        if user_id is None:
             raise credentials_exception
 
     except JWTError:
         raise credentials_exception
 
-    user = db.query(User).filter(User.id == sub).first()
+    user = db.query(User).filter(User.id == user_id).first()
 
     if user is None:
         raise credentials_exception

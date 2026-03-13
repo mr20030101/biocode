@@ -11,12 +11,15 @@ type Department = {
 
 export function NewEquipmentPage() {
   const nav = useNavigate();
+
   const [assetTag, setAssetTag] = useState("");
   const [deviceName, setDeviceName] = useState("");
   const [manufacturer, setManufacturer] = useState("");
   const [model, setModel] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
+  const [installationDate, setInstallationDate] = useState("");
+
   const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -38,21 +41,25 @@ export function NewEquipmentPage() {
     e.preventDefault();
     setError(null);
     setSubmitting(true);
+
     try {
       await apiFetch("/equipment/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           asset_tag: assetTag,
-          device_name: deviceName,
+          equipment_name: deviceName,
           manufacturer: manufacturer || null,
           model: model || null,
           status: "active",
           department_id: departmentId || null,
           serial_number: serialNumber || null,
+          installation_date: installationDate || null,
         }),
       });
+
       nav("/equipment");
+
     } catch (err: any) {
       setError(err?.message ?? "Failed to create equipment");
     } finally {
@@ -63,15 +70,18 @@ export function NewEquipmentPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navigation />
-      
+
       <div className="page-content max-w-3xl mx-auto py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900">New Equipment</h1>
-          <p className="text-gray-600 mt-1">Add a new device to your inventory</p>
+          <p className="text-gray-600 mt-1">
+            Add a new device to your inventory
+          </p>
         </div>
 
         <div className="card">
           <form onSubmit={onSubmit} className="space-y-4">
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Asset Tag
@@ -114,6 +124,7 @@ export function NewEquipmentPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Manufacturer
@@ -139,6 +150,7 @@ export function NewEquipmentPage() {
                   placeholder="e.g., Luminos dRF Max"
                 />
               </div>
+
             </div>
 
             <div>
@@ -159,6 +171,21 @@ export function NewEquipmentPage() {
               </select>
             </div>
 
+            {/* NEW FIELD */}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Installation Date
+              </label>
+
+              <input
+                type="date"
+                value={installationDate}
+                onChange={(e) => setInstallationDate(e.target.value)}
+                className="input-field"
+              />
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                 {error}
@@ -166,9 +193,15 @@ export function NewEquipmentPage() {
             )}
 
             <div className="flex space-x-3 pt-4">
-              <button type="submit" disabled={submitting} className="btn-primary">
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary"
+              >
                 {submitting ? "Saving..." : "Save Equipment"}
               </button>
+
               <button
                 type="button"
                 onClick={() => nav(-1)}
@@ -176,7 +209,9 @@ export function NewEquipmentPage() {
               >
                 Cancel
               </button>
+
             </div>
+
           </form>
         </div>
       </div>

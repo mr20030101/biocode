@@ -1,2 +1,8 @@
 {
+    "python.envFile": "${workspaceFolder}/backend/.env",
+    "python.analysis.extraPaths": [
+        "./backend"
+    ],
+    "python.terminal.activateEnvironment": true,
+    "python.terminal.useEnvFile": true
 }

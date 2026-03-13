@@ -78,7 +78,7 @@ def list_tickets(
     for ticket in tickets_list:
         items.append({
             "id": ticket.id,
-            "ticket_code": ticket.ticket_code,
+            "ticket_code": ticket.id,
             "equipment_id": ticket.equipment_id,
             "title": ticket.title,
             "description": ticket.description,

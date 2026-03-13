@@ -1,26 +1,32 @@
-import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+from app.models.base import Base
 
-
-def get_database_url() -> str:
-    # Prefer env var so Alembic + app stay consistent.
-    return os.getenv("DATABASE_URL", "sqlite:///./biocode.db")
-
-
-def create_db_engine():
-    url = get_database_url()
-    connect_args = {}
-    if url.startswith("sqlite:"):
-        # Needed for SQLite when used in multi-threaded servers.
-        connect_args = {"check_same_thread": False}
-    return create_engine(url, future=True, connect_args=connect_args)
+# Import models so SQLAlchemy registers them
+# from app.models import user
+# from app.models import department
+# from app.models import equipment
+# from app.models import location
 
 
-engine = create_db_engine()
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+DATABASE_URL = "mysql+pymysql://root:@localhost/biocode"
 
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+)
+
+SessionLocal = sessionmaker(
+    bind=engine,
+    autoflush=False,
+    autocommit=False,
+)
+
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

@@ -1,12 +1,19 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
+if TYPE_CHECKING:
+    from .department import Department
+    from .notification import Notification
 
 from sqlalchemy import Boolean, ForeignKey, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin, _uuid_str
 from .enums import UserRole
+
+if TYPE_CHECKING:
+    from .department import Department
+    from .notification import Notification
 
 
 class User(Base, TimestampMixin):

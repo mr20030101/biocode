@@ -1,18 +1,22 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .base import Base, TimestampMixin, _uuid_str
 
+if TYPE_CHECKING:
+    from .equipment import Equipment
+
 
 class Location(Base, TimestampMixin):
     __tablename__ = "locations"
 
     id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=_uuid_str)
+        String(36), primary_key=True, default=_uuid_str
+    )
 
     name: Mapped[str] = mapped_column(String(255), nullable=False)
 

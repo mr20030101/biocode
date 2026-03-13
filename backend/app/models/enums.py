@@ -25,3 +25,11 @@ class TicketStatus(str, enum.Enum):
     in_progress = "in_progress"
     resolved = "resolved"
     closed = "closed"
+
+
+class LogType(str, enum.Enum):
+    create = "create"
+    update = "update"
+    delete = "delete"
+    maintenance = "maintenance"
+    system = "system"
