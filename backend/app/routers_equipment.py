@@ -1,23 +1,31 @@
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
+import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
-from .auth import get_db, get_current_user
-from .models import Equipment, User
-from .schemas import (
+from app.auth import get_db, get_current_user
+from app.models import Equipment, User
+from app.models.service_history import ServiceHistory
+
+from app.schemas import (
     EquipmentCreate,
     EquipmentOut,
     EquipmentUpdateStatus,
     EquipmentUpdate,
+    ServiceHistoryCreate,
+    ServiceHistoryOut,
+    ServiceHistoryUpdate,
 )
-from .permissions import (
+
+from app.permissions import (
     can_update_equipment_status,
     can_create_equipment,
     can_view_equipment,
 )
-from . import notification_service
 
+from app import notification_service
+from app.utils.audit import log_action
 
 router = APIRouter(prefix="/equipment", tags=["equipment"])
 
@@ -35,10 +43,8 @@ def list_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if not can_view_equipment(current_user):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to view equipment")
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     query = db.query(Equipment)
 
@@ -61,7 +67,6 @@ def list_equipment(
     offset = (page - 1) * page_size
     equipment_list = query.offset(offset).limit(page_size).all()
 
-    # Risk Sorting
     equipment_list.sort(
         key=lambda e: (
             e.risk_priority if e.risk_priority is not None else 999,
@@ -89,7 +94,6 @@ def get_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     equipment = db.query(Equipment).filter(
         Equipment.id == equipment_id).first()
 
@@ -100,7 +104,77 @@ def get_equipment(
 
 
 # =========================================================
-# CREATE EQUIPMENT
+# SERVICE HISTORY
+# =========================================================
+@router.get("/{equipment_id}/history", response_model=List[ServiceHistoryOut])
+def get_service_history(
+    equipment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    equipment = db.query(Equipment).filter(
+        Equipment.id == equipment_id).first()
+
+    if not equipment:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    return (
+        db.query(ServiceHistory)
+        .filter(ServiceHistory.equipment_id == equipment_id)
+        .order_by(ServiceHistory.date.desc())
+        .all()
+    )
+
+
+# =========================================================
+# ADD SERVICE HISTORY
+# =========================================================
+@router.post("/{equipment_id}/history", response_model=ServiceHistoryOut)
+def add_service_history(
+    equipment_id: str,
+    payload: ServiceHistoryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    equipment = db.query(Equipment).filter(
+        Equipment.id == equipment_id).first()
+
+    if not equipment:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    new_record = ServiceHistory(
+        equipment_id=equipment_id,
+        date=payload.date,
+        work_done=payload.work_done,
+        engineer=payload.engineer,
+    )
+
+    db.add(new_record)
+    db.commit()
+    db.refresh(new_record)
+
+    try:
+        log_action(
+            db,
+            action="CREATE",
+            entity="service_history",
+            entity_id=new_record.id,
+            user_id=current_user.id,
+            details={
+                "work_done": new_record.work_done,
+                "engineer": new_record.engineer,
+                "date": str(new_record.date),
+                "equipment_id": new_record.equipment_id,
+            },
+        )
+    except Exception:
+        pass
+
+    return new_record
+
+
+# =========================================================
+# CREATE EQUIPMENT 🔥 FIXED ONLY HERE
 # =========================================================
 @router.post("/", response_model=EquipmentOut)
 def create_equipment(
@@ -108,12 +182,45 @@ def create_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if not can_create_equipment(current_user):
-        raise HTTPException(
-            status_code=403, detail="Supervisor access required")
+        raise HTTPException(status_code=403, detail="Supervisor required")
 
-    equipment = Equipment(**payload.model_dump())
+    data = payload.model_dump()
+
+    # 🔥 HARD VALIDATION
+    if not data.get("equipment_name"):
+        raise HTTPException(
+            status_code=400, detail="Equipment name is required")
+
+    # ✅ SAFE acquisition_type
+    acquisition = data.get("acquisition_type") or "Owned"
+    if acquisition not in ["Owned", "Tie-up"]:
+        acquisition = "Owned"
+    data["acquisition_type"] = acquisition
+
+    # 🔥 FIXED FIELD FILTER
+    allowed_fields = {
+        "asset_tag",
+        "equipment_name",  # ✅ FIX
+        "model",
+        "brand",
+        "serial_number",
+        "location_id",     # ✅ FIX
+        "department_id",
+        "status",
+        "acquisition_type",
+        "installation_date",
+        "lifecycle_type",
+        "lifecycle_years",
+        "max_operating_hours",  # ✅ FIX
+    }
+
+    filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
+
+    equipment = Equipment(
+        id=str(uuid.uuid4()),
+        **filtered_data
+    )
 
     db.add(equipment)
     db.commit()
@@ -132,10 +239,8 @@ def update_equipment_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if not can_update_equipment_status(current_user):
-        raise HTTPException(
-            status_code=403, detail="Supervisor access required")
+        raise HTTPException(status_code=403, detail="Supervisor required")
 
     equipment = db.query(Equipment).filter(
         Equipment.id == equipment_id).first()
@@ -149,15 +254,11 @@ def update_equipment_status(
     db.commit()
     db.refresh(equipment)
 
-    # Notification
     if old_status != equipment.status:
         try:
             notification_service.notify_equipment_status_changed(
-                db,
-                equipment,
-                str(old_status),
-                str(equipment.status),
-                current_user,
+                db, equipment, str(old_status), str(
+                    equipment.status), current_user
             )
         except Exception:
             pass
@@ -175,9 +276,8 @@ def update_equipment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if not can_create_equipment(current_user):
-        raise HTTPException(status_code=403, detail="Manager access required")
+        raise HTTPException(status_code=403, detail="Manager required")
 
     equipment = db.query(Equipment).filter(
         Equipment.id == equipment_id).first()
@@ -185,9 +285,12 @@ def update_equipment(
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
 
-    old_status = equipment.status
-
     update_data = payload.model_dump(exclude_unset=True)
+
+    if "acquisition_type" in update_data:
+        acquisition = update_data["acquisition_type"]
+        if acquisition not in ["Owned", "Tie-up"]:
+            update_data["acquisition_type"] = "Owned"
 
     for field, value in update_data.items():
         setattr(equipment, field, value)
@@ -195,34 +298,43 @@ def update_equipment(
     db.commit()
     db.refresh(equipment)
 
-    # Notification
-    if "status" in update_data and old_status != equipment.status:
-        try:
-            notification_service.notify_equipment_status_changed(
-                db,
-                equipment,
-                str(old_status),
-                str(equipment.status),
-                current_user,
-            )
-        except Exception:
-            pass
-
     return equipment
 
 
 # =========================================================
-# COMMAND CENTER DASHBOARD
+# DELETE EQUIPMENT
+# =========================================================
+@router.delete("/{equipment_id}")
+def delete_equipment(
+    equipment_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not can_create_equipment(current_user):
+        raise HTTPException(status_code=403, detail="Manager required")
+
+    equipment = db.query(Equipment).filter(
+        Equipment.id == equipment_id).first()
+
+    if not equipment:
+        raise HTTPException(status_code=404, detail="Equipment not found")
+
+    db.delete(equipment)
+    db.commit()
+
+    return {"message": "Equipment deleted successfully"}
+
+
+# =========================================================
+# DASHBOARD
 # =========================================================
 @router.get("/dashboard", response_model=Dict[str, Any])
 def equipment_dashboard(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     if not can_view_equipment(current_user):
-        raise HTTPException(
-            status_code=403, detail="Not authorized to view equipment")
+        raise HTTPException(status_code=403, detail="Not authorized")
 
     equipment_list = db.query(Equipment).all()
 
@@ -236,52 +348,22 @@ def equipment_dashboard(
         "near_end_of_life": 0,
     }
 
-    critical_equipment = []
-    pm_alerts = []
-    lifecycle_warning = []
-
     for eq in equipment_list:
-
         stats["total_equipment"] += 1
 
-        # Health status
         if eq.health_status == "healthy":
             stats["healthy"] += 1
-
         elif eq.health_status == "warning":
             stats["warning"] += 1
-
         elif eq.health_status == "attention":
             stats["attention"] += 1
-
         elif eq.health_status == "critical":
             stats["critical"] += 1
-            critical_equipment.append(eq)
 
-        # PM alerts
         if eq.pm_alert in ["pm_required", "no_pm_record"]:
             stats["pm_overdue"] += 1
-            pm_alerts.append(eq)
 
-        # Lifecycle warning
-        if eq.remaining_operating_months is not None:
-            if eq.remaining_operating_months <= 6:
-                stats["near_end_of_life"] += 1
-                lifecycle_warning.append(eq)
+        if eq.remaining_operating_months is not None and eq.remaining_operating_months <= 6:
+            stats["near_end_of_life"] += 1
 
-    # Highest Risk Sorting
-    highest_risk = sorted(
-        equipment_list,
-        key=lambda e: (
-            e.risk_priority if e.risk_priority is not None else 999,
-            -(e.repair_count or 0),
-        ),
-    )[:10]
-
-    return {
-        "stats": stats,
-        "critical_equipment": [EquipmentOut.model_validate(e) for e in critical_equipment[:10]],
-        "pm_alerts": [EquipmentOut.model_validate(e) for e in pm_alerts[:10]],
-        "lifecycle_warning": [EquipmentOut.model_validate(e) for e in lifecycle_warning[:10]],
-        "highest_risk": [EquipmentOut.model_validate(e) for e in highest_risk],
-    }
+    return {"stats": stats}

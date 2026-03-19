@@ -12,8 +12,6 @@ type Equipment = {
   equipment_name?: string
   status?: string
 
-  acquisition_type?: "Owned" | "Tie-up"
-
   lifecycle_type?: "years" | "hours"
   lifecycle_years?: number
 
@@ -252,8 +250,6 @@ export function EquipmentPage() {
             const risk = calculateRiskScore(e)
             const isHighRisk = risk > 120
 
-            const acquisition = e.acquisition_type ?? "Owned"
-
             return (
 
               <div
@@ -273,18 +269,6 @@ export function EquipmentPage() {
 
                     <div className="font-bold text-lg">
                       {e.equipment_name ?? "Unknown Equipment"}
-                    </div>
-
-                    {/* ✅ Acquisition Type Tag */}
-                    <div className="mt-1">
-                      <span
-                        className={`px-2 py-1 text-xs rounded ${acquisition === "Owned"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-blue-100 text-blue-700"
-                          }`}
-                      >
-                        {acquisition}
-                      </span>
                     </div>
 
                     <div className="text-xs text-blue-600 mt-1">

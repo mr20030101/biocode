@@ -13,12 +13,21 @@ export function NewEquipmentPage() {
   const nav = useNavigate();
 
   const [assetTag, setAssetTag] = useState("");
-  const [deviceName, setDeviceName] = useState("");
+  const [equipmentName, setEquipmentName] = useState("");
   const [manufacturer, setManufacturer] = useState("");
   const [model, setModel] = useState("");
   const [departmentId, setDepartmentId] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [installationDate, setInstallationDate] = useState("");
+
+  const [acquisitionType, setAcquisitionType] =
+    useState<"Owned" | "Tie-up">("Owned");
+
+  const [lifecycleType, setLifecycleType] =
+    useState<"years" | "hours">("years");
+
+  const [lifecycleYears, setLifecycleYears] = useState<number | "">("");
+  const [maxOperatingHours, setMaxOperatingHours] = useState<number | "">("");
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -31,37 +40,96 @@ export function NewEquipmentPage() {
   const loadDepartments = async () => {
     try {
       const data = await apiFetch<Department[]>("/departments/");
-      setDepartments(data);
-    } catch (e: any) {
+      setDepartments(data ?? []);
+    } catch (e) {
       console.error("Failed to load departments:", e);
     }
   };
 
-  const onSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // ✅ STRICT VALIDATION
+    if (!assetTag.trim()) {
+      setError("Asset Tag is required");
+      return;
+    }
+
+    if (!equipmentName.trim()) {
+      setError("Equipment Name is required");
+      return;
+    }
+
+    if (lifecycleType === "years" && lifecycleYears === "") {
+      setError("Lifecycle Years is required");
+      return;
+    }
+
+    if (lifecycleType === "hours" && maxOperatingHours === "") {
+      setError("Max Operating Hours is required");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
+      // ✅ SAFE DATE FORMAT
+      let formattedDate: string | null = null;
+      if (installationDate) {
+        const d = new Date(installationDate);
+        if (!isNaN(d.getTime())) {
+          formattedDate = d.toISOString().split("T")[0];
+        }
+      }
+
+      // 🔥 FINAL PAYLOAD (BACKEND SAFE)
+      const payload = {
+        asset_tag: assetTag.trim(),
+        equipment_name: equipmentName.trim(),
+
+        model: model.trim() || null,
+        brand: manufacturer.trim() || null,
+        serial_number: serialNumber.trim() || null,
+
+        acquisition_type: acquisitionType,
+        status: "active",
+
+        department_id: departmentId || null,
+        installation_date: formattedDate,
+
+        lifecycle_type: lifecycleType,
+
+        lifecycle_years:
+          lifecycleType === "years" && lifecycleYears !== ""
+            ? Number(lifecycleYears)
+            : null,
+
+        max_operating_hours:
+          lifecycleType === "hours" && maxOperatingHours !== ""
+            ? Number(maxOperatingHours)
+            : null,
+      };
+
+      console.log("Submitting payload:", payload);
+
       await apiFetch("/equipment/", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          asset_tag: assetTag,
-          equipment_name: deviceName,
-          manufacturer: manufacturer || null,
-          model: model || null,
-          status: "active",
-          department_id: departmentId || null,
-          serial_number: serialNumber || null,
-          installation_date: installationDate || null,
-        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
 
       nav("/equipment");
+    } catch (err) {
+      console.error("Submit error:", err);
 
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to create equipment");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create equipment"
+      );
     } finally {
       setSubmitting(false);
     }
@@ -73,144 +141,144 @@ export function NewEquipmentPage() {
 
       <div className="page-content max-w-3xl mx-auto py-8">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">New Equipment</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            New Equipment
+          </h1>
+
           <p className="text-gray-600 mt-1">
             Add a new device to your inventory
           </p>
         </div>
 
         <div className="card">
-          <form onSubmit={onSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            <input
+              type="text"
+              value={assetTag}
+              onChange={(e) => setAssetTag(e.target.value)}
+              required
+              className="input-field"
+              placeholder="Asset Tag"
+            />
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Asset Tag
+                Equipment Name
               </label>
               <input
                 type="text"
-                value={assetTag}
-                onChange={(e) => setAssetTag(e.target.value)}
+                value={equipmentName}
+                onChange={(e) => setEquipmentName(e.target.value)}
                 required
                 className="input-field"
-                placeholder="e.g., BIO-001"
+                placeholder="Enter equipment name"
               />
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Device Name
-              </label>
+            <select
+              value={acquisitionType}
+              onChange={(e) =>
+                setAcquisitionType(e.target.value as "Owned" | "Tie-up")
+              }
+              className="input-field"
+            >
+              <option value="Owned">Owned</option>
+              <option value="Tie-up">Tie-up</option>
+            </select>
+
+            <input
+              type="text"
+              value={serialNumber}
+              onChange={(e) => setSerialNumber(e.target.value)}
+              className="input-field"
+              placeholder="Serial Number"
+            />
+
+            <input
+              type="text"
+              value={manufacturer}
+              onChange={(e) => setManufacturer(e.target.value)}
+              className="input-field"
+              placeholder="Manufacturer"
+            />
+
+            <input
+              type="text"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              className="input-field"
+              placeholder="Model (Optional)"
+            />
+
+            <select
+              value={departmentId}
+              onChange={(e) => setDepartmentId(e.target.value)}
+              className="input-field"
+            >
+              <option value="">Select Department</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="date"
+              value={installationDate}
+              onChange={(e) => setInstallationDate(e.target.value)}
+              className="input-field"
+            />
+
+            <select
+              value={lifecycleType}
+              onChange={(e) =>
+                setLifecycleType(e.target.value as "years" | "hours")
+              }
+              className="input-field"
+            >
+              <option value="years">Standard Equipment (Years)</option>
+              <option value="hours">Dialysis Machine (Hours)</option>
+            </select>
+
+            {lifecycleType === "years" && (
               <input
-                type="text"
-                value={deviceName}
-                onChange={(e) => setDeviceName(e.target.value)}
-                required
+                type="number"
+                value={lifecycleYears}
+                onChange={(e) =>
+                  setLifecycleYears(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
+                }
                 className="input-field"
-                placeholder="e.g., X-Ray Machine"
+                placeholder="Lifecycle Years"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Serial Number
-              </label>
-              <input
-                type="text"
-                value={serialNumber}
-                onChange={(e) => setSerialNumber(e.target.value)}
-                className="input-field"
-                placeholder="e.g., SN123456789"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Manufacturer
-                </label>
-                <input
-                  type="text"
-                  value={manufacturer}
-                  onChange={(e) => setManufacturer(e.target.value)}
-                  className="input-field"
-                  placeholder="e.g., Siemens"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Model
-                </label>
-                <input
-                  type="text"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="input-field"
-                  placeholder="e.g., Luminos dRF Max"
-                />
-              </div>
-
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Department
-              </label>
-              <select
-                value={departmentId}
-                onChange={(e) => setDepartmentId(e.target.value)}
-                className="input-field"
-              >
-                <option value="">Select department (optional)</option>
-                {departments.map((dept) => (
-                  <option key={dept.id} value={dept.id}>
-                    {dept.name} {dept.code ? `(${dept.code})` : ""}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* NEW FIELD */}
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Installation Date
-              </label>
-
-              <input
-                type="date"
-                value={installationDate}
-                onChange={(e) => setInstallationDate(e.target.value)}
-                className="input-field"
-              />
-            </div>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-                {error}
-              </div>
             )}
 
-            <div className="flex space-x-3 pt-4">
+            {lifecycleType === "hours" && (
+              <input
+                type="number"
+                value={maxOperatingHours}
+                onChange={(e) =>
+                  setMaxOperatingHours(
+                    e.target.value === "" ? "" : Number(e.target.value)
+                  )
+                }
+                className="input-field"
+                placeholder="Max Operating Hours"
+              />
+            )}
 
-              <button
-                type="submit"
-                disabled={submitting}
-                className="btn-primary"
-              >
-                {submitting ? "Saving..." : "Save Equipment"}
-              </button>
+            {error && <div className="text-red-500">{error}</div>}
 
-              <button
-                type="button"
-                onClick={() => nav(-1)}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-
-            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="btn-primary"
+            >
+              {submitting ? "Saving..." : "Save Equipment"}
+            </button>
 
           </form>
         </div>
@@ -218,4 +286,3 @@ export function NewEquipmentPage() {
     </div>
   );
 }
-

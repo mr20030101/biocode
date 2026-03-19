@@ -6,6 +6,8 @@ from .notification import Notification
 from .user import User
 from .department import Department
 from .location import Location   # ← ADD THIS
+from .service_history import ServiceHistory
+from .audit_log import AuditLog
 
 # enums
 from .enums import (

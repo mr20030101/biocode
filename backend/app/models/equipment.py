@@ -1,172 +1,153 @@
-from __future__ import annotations
-
-from typing import Optional, List, TYPE_CHECKING
 from datetime import date
-import enum
 
-from sqlalchemy import ForeignKey, String, Enum, Integer, Date
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Date
+from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 
-from .base import Base, TimestampMixin, _uuid_str
-from .enums import EquipmentStatus
-
-if TYPE_CHECKING:
-    from .department import Department
-    from .location import Location
-    from .machine_hour_reading import MachineHourReading
+from ..database import Base
 
 
-class LifecycleType(str, enum.Enum):
-    hours = "hours"
-    years = "years"
-
-
-class Equipment(Base, TimestampMixin):
+class Equipment(Base):
     __tablename__ = "equipment"
 
-    id: Mapped[str] = mapped_column(
-        String(36),
-        primary_key=True,
-        default=_uuid_str,
-    )
+    id = Column(String(36), primary_key=True, index=True)
 
-    asset_tag: Mapped[str] = mapped_column(
-        String(64),
-        nullable=False,
-        unique=True,
-    )
+    equipment_name = Column(String(255), nullable=False)
+    asset_tag = Column(String(100), unique=True, index=True)
+    serial_number = Column(String(100))
 
-    equipment_name: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
-    )
+    manufacturer = Column(String(255), nullable=True)
+    model = Column(String(255), nullable=True)
 
-    manufacturer: Mapped[Optional[str]] = mapped_column(
-        String(255),
-        nullable=True,
-    )
+    # ✅ NEW FIELD — Acquisition Type
+    acquisition_type = Column(String(20), default="Owned")
 
-    model: Mapped[Optional[str]] = mapped_column(
-        String(255),
-        nullable=True,
-    )
+    # =====================================================
+    # RELATION KEYS
+    # =====================================================
 
-    status: Mapped[EquipmentStatus] = mapped_column(
-        Enum(EquipmentStatus),
-        default=EquipmentStatus.active,
-        nullable=False,
-    )
+    department_id = Column(String(36), ForeignKey(
+        "departments.id"), nullable=True)
+    location_id = Column(String(36), ForeignKey("locations.id"), nullable=True)
 
-    # -----------------------------
-    # Lifecycle Configuration
-    # -----------------------------
+    status = Column(String(50), default="active")
 
-    lifecycle_type: Mapped[LifecycleType] = mapped_column(
-        Enum(LifecycleType),
-        default=LifecycleType.years,
-        nullable=False,
-    )
+    # =====================================================
+    # LIFECYCLE CONFIGURATION
+    # =====================================================
 
-    installation_date: Mapped[Optional[date]] = mapped_column(
-        Date,
-        nullable=True,
-    )
+    installation_date = Column(Date, nullable=True)
 
-    lifecycle_years: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        nullable=True,
-    )
+    lifecycle_type = Column(String(20), default="years")  # "years" or "hours"
+    lifecycle_years = Column(Integer, nullable=True)
 
-    # These fields already exist in your database
-    current_operating_hours: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        nullable=True,
-    )
+    # Dialysis lifecycle
+    max_operating_hours = Column(Integer, nullable=True)
 
-    remaining_operating_months: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        nullable=True,
-    )
+    # =====================================================
+    # HEALTH / RISK
+    # =====================================================
 
-    # -----------------------------
-    # Risk Engine Fields
-    # -----------------------------
+    risk_priority = Column(Integer, default=5)
+    repair_count = Column(Integer, default=0)
 
-    risk_priority: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        nullable=True,
-    )
+    health_status = Column(String(50), default="healthy")
+    pm_alert = Column(String(50), nullable=True)
 
-    repair_count: Mapped[Optional[int]] = mapped_column(
-        Integer,
-        nullable=True,
-        default=0,
-    )
+    # Stored value (optional optimization)
+    remaining_operating_months = Column(Integer, nullable=True)
 
-    # -----------------------------
-    # Location / Department
-    # -----------------------------
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
-    department_id: Mapped[Optional[str]] = mapped_column(
-        String(36),
-        ForeignKey("departments.id"),
-        nullable=True,
-    )
+    # =====================================================
+    # RELATIONSHIPS
+    # =====================================================
 
-    location_id: Mapped[Optional[str]] = mapped_column(
-        String(36),
-        ForeignKey("locations.id"),
-        nullable=True,
-    )
+    department = relationship("Department", back_populates="equipment")
+    location = relationship("Location", back_populates="equipment")
 
-    # -----------------------------
-    # Relationships
-    # -----------------------------
-
-    department: Mapped[Optional["Department"]] = relationship(
-        "Department",
-        back_populates="equipment",
-    )
-
-    location: Mapped[Optional["Location"]] = relationship(
-        "Location",
-        back_populates="equipment",
-    )
-
-    readings: Mapped[List["MachineHourReading"]] = relationship(
+    readings = relationship(
         "MachineHourReading",
         back_populates="equipment",
-        cascade="all, delete-orphan",
+        cascade="all, delete-orphan"
     )
 
-    # -----------------------------
-    # Lifecycle Calculations
-    # -----------------------------
+    # =====================================================
+    # LIFECYCLE COMPUTATION ENGINE
+    # =====================================================
 
     @property
-    def remaining_life_years(self) -> Optional[int]:
+    def current_operating_hours(self):
         """
-        Used for normal equipment:
-        suction machine, ventilator, infusion pump, etc.
+        Returns latest machine hour reading.
+        Used for dialysis lifecycle tracking.
         """
-        if self.lifecycle_type != LifecycleType.years:
+        if not self.readings:
+            return None
+
+        valid_readings = [
+            r.reading_hours for r in self.readings
+            if r.reading_hours is not None
+        ]
+
+        if not valid_readings:
+            return None
+
+        return max(valid_readings)
+
+    @property
+    def remaining_life_years(self):
+        """
+        Remaining life for standard equipment.
+        """
+        if self.lifecycle_type != "years":
             return None
 
         if not self.installation_date or not self.lifecycle_years:
             return None
 
-        used_years = date.today().year - self.installation_date.year
-        remaining = self.lifecycle_years - used_years
+        today = date.today()
 
-        return max(remaining, 0)
+        age_days = (today - self.installation_date).days
+        age_years = age_days / 365
+
+        remaining = self.lifecycle_years - age_years
+
+        return round(max(remaining, 0), 2)
 
     @property
-    def remaining_life_months(self) -> Optional[int]:
+    def remaining_life_months(self):
         """
-        Used for dialysis machines
-        Uses stored value from database.
+        Converts remaining years into months.
         """
-        if self.lifecycle_type != LifecycleType.hours:
+        years = self.remaining_life_years
+
+        if years is None:
             return None
 
-        return self.remaining_operating_months
+        return int(years * 12)
+
+    @property
+    def remaining_operating_months_calc(self):
+        """
+        Dialysis lifecycle calculation.
+        Remaining months based on operating hours.
+        """
+        if self.lifecycle_type != "hours":
+            return None
+
+        if not self.max_operating_hours:
+            return None
+
+        current = self.current_operating_hours
+
+        if current is None:
+            return None
+
+        remaining_hours = self.max_operating_hours - current
+
+        if remaining_hours <= 0:
+            return 0
+
+        # Dialysis assumption: 360 hours/month
+        return int(remaining_hours / 360)

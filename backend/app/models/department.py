@@ -1,43 +1,26 @@
-from __future__ import annotations
+from sqlalchemy import Column, String
+from sqlalchemy.orm import relationship
 
-from typing import Optional, TYPE_CHECKING, List
-
-from sqlalchemy import String, Text
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from .base import Base, TimestampMixin, _uuid_str
-
-if TYPE_CHECKING:
-    from .equipment import Equipment
-    from .user import User
+from ..database import Base
 
 
-class Department(Base, TimestampMixin):
+class Department(Base):
     __tablename__ = "departments"
 
-    id: Mapped[str] = mapped_column(
-        String(36),
-        primary_key=True,
-        default=_uuid_str
-    )
+    id = Column(String, primary_key=True, index=True)
 
-    name: Mapped[str] = mapped_column(
-        String(255),
-        nullable=False,
-        unique=True
-    )
+    name = Column(String, unique=True, nullable=False)
 
-    description: Mapped[Optional[str]] = mapped_column(
-        Text,
-        nullable=True
-    )
-
-    equipment: Mapped[List["Equipment"]] = relationship(
+    # Department has many equipment
+    equipment = relationship(
         "Equipment",
-        back_populates="department"
+        back_populates="department",
+        cascade="all, delete"
     )
 
-    users: Mapped[List["User"]] = relationship(
+    # Department has many users
+    users = relationship(
         "User",
-        back_populates="department"
+        back_populates="department",
+        cascade="all, delete"
     )

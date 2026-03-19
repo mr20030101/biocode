@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "react-router-dom"
 import { Layout } from "../components/Layout"
 import { apiFetch } from "../lib/api"
@@ -34,7 +34,6 @@ type Equipment = {
   department_id?: string | null
   repair_count: number
   health_status?: string
-  acquisition_type?: string | null // ✅ ADDED
 }
 
 type Ticket = {
@@ -116,26 +115,6 @@ export function DashboardPage() {
     }
 
   }
-
-  // =========================
-  // 🔥 ACQUISITION INSIGHT
-  // =========================
-  const { ownedCount, tieupCount } = useMemo(() => {
-
-    const owned = equipment.filter(
-      (e) => e.acquisition_type === "Owned"
-    ).length
-
-    const tieup = equipment.filter(
-      (e) => e.acquisition_type === "Tie-up"
-    ).length
-
-    return {
-      ownedCount: owned,
-      tieupCount: tieup
-    }
-
-  }, [equipment])
 
   const activeEquipment =
     equipment.filter(e => e.status === "active").length
@@ -261,17 +240,6 @@ export function DashboardPage() {
               </div>
 
             )}
-
-            {/* 🔥 NEW: ACQUISITION INSIGHT */}
-            <div className="flex gap-4 mb-8">
-              <div className="bg-green-100 px-4 py-2 rounded-xl shadow">
-                🟢 Owned: {ownedCount}
-              </div>
-
-              <div className="bg-blue-100 px-4 py-2 rounded-xl shadow">
-                🔵 Tie-up: {tieupCount}
-              </div>
-            </div>
 
             {/* DASHBOARD STATS */}
 

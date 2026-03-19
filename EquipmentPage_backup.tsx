@@ -12,8 +12,6 @@ type Equipment = {
   equipment_name?: string
   status?: string
 
-  acquisition_type?: "Owned" | "Tie-up"
-
   lifecycle_type?: "years" | "hours"
   lifecycle_years?: number
 
@@ -92,27 +90,6 @@ export function EquipmentPage() {
 
     } catch (e: any) {
       showError("Failed to Load Equipment", e?.message)
-    }
-  }
-
-  const handleDelete = async (equipment: Equipment) => {
-
-    const confirmDelete = window.confirm(
-      `⚠ Delete Equipment?\n\nAsset Tag: ${equipment.asset_tag}\nName: ${equipment.equipment_name}`
-    )
-
-    if (!confirmDelete) return
-
-    try {
-
-      await apiFetch(`/equipment/${equipment.id}`, {
-        method: "DELETE",
-      })
-
-      loadEquipment()
-
-    } catch (e: any) {
-      showError("Failed to delete equipment", e?.message)
     }
   }
 
@@ -252,8 +229,6 @@ export function EquipmentPage() {
             const risk = calculateRiskScore(e)
             const isHighRisk = risk > 120
 
-            const acquisition = e.acquisition_type ?? "Owned"
-
             return (
 
               <div
@@ -273,18 +248,6 @@ export function EquipmentPage() {
 
                     <div className="font-bold text-lg">
                       {e.equipment_name ?? "Unknown Equipment"}
-                    </div>
-
-                    {/* ✅ Acquisition Type Tag */}
-                    <div className="mt-1">
-                      <span
-                        className={`px-2 py-1 text-xs rounded ${acquisition === "Owned"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-blue-100 text-blue-700"
-                          }`}
-                      >
-                        {acquisition}
-                      </span>
                     </div>
 
                     <div className="text-xs text-blue-600 mt-1">
@@ -307,27 +270,13 @@ export function EquipmentPage() {
                       {getRemainingLife(e)}
                     </div>
 
-                    <div className="flex gap-2 mt-3 justify-end flex-wrap">
+                    <div className="flex gap-2 mt-3 justify-end">
 
                       <button
                         onClick={() => navigate(`/equipment/${e.id}`)}
                         className="text-xs px-2 py-1 border rounded hover:bg-gray-100"
                       >
                         View
-                      </button>
-
-                      <button
-                        onClick={() => navigate(`/equipment/edit/${e.id}`)}
-                        className="text-xs px-2 py-1 border rounded hover:bg-gray-100"
-                      >
-                        Edit
-                      </button>
-
-                      <button
-                        onClick={() => handleDelete(e)}
-                        className="text-xs px-2 py-1 border border-red-400 text-red-600 rounded hover:bg-red-50"
-                      >
-                        Delete
                       </button>
 
                       <button

@@ -1,31 +1,18 @@
-from __future__ import annotations
+from sqlalchemy import Column, String
+from sqlalchemy.orm import relationship
 
-from typing import Optional, TYPE_CHECKING
-
-from sqlalchemy import String
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from .base import Base, TimestampMixin, _uuid_str
-
-if TYPE_CHECKING:
-    from .equipment import Equipment
+from ..database import Base
 
 
-class Location(Base, TimestampMixin):
+class Location(Base):
     __tablename__ = "locations"
 
-    id: Mapped[str] = mapped_column(
-        String(36), primary_key=True, default=_uuid_str
-    )
+    id = Column(String, primary_key=True, index=True)
 
-    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    name = Column(String, nullable=False)
 
-    building: Mapped[Optional[str]] = mapped_column(String(255))
-
-    floor: Mapped[Optional[str]] = mapped_column(String(64))
-
-    room: Mapped[Optional[str]] = mapped_column(String(64))
-
-    equipment: Mapped[list["Equipment"]] = relationship(
-        "Equipment", back_populates="location"
+    equipment = relationship(
+        "Equipment",
+        back_populates="location",
+        cascade="all, delete"
     )

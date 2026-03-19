@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL?.toString() ?? "http://localhost:8000";
+  import.meta.env.VITE_API_BASE_URL?.toString() ?? "http://127.0.0.1:8000";
 
 export type TokenResponse = {
   access_token: string;
@@ -11,34 +11,46 @@ function getToken(): string | null {
 }
 
 export function setToken(token: string | null) {
-  if (!token) localStorage.removeItem("access_token");
-  else localStorage.setItem("access_token", token);
+  if (!token) {
+    localStorage.removeItem("access_token");
+  } else {
+    localStorage.setItem("access_token", token);
+  }
 }
 
-export async function apiFetch<T>(
-  path: string,
-  init: RequestInit = {},
+// ✅ FINAL apiFetch (MATCHES REQUIRED FORMAT + SAFE + TOKEN SUPPORT)
+export async function apiFetch<T = any>(
+  url: string,
+  options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
-  const headers = new Headers(init.headers);
-  headers.set("Accept", "application/json");
-  if (token) headers.set("Authorization", `Bearer ${token}`);
 
-  const res = await fetch(`${API_BASE_URL}${path}`, {
-    ...init,
-    headers,
+  const res = await fetch(`${API_BASE_URL}${url}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(options.headers || {}),
+    },
   });
 
-  const text = await res.text();
-  const data = text ? JSON.parse(text) : null;
+  // ❌ HANDLE ERROR (exactly like your required pattern)
   if (!res.ok) {
-    const msg =
-      (data && (data.detail || data.message)) || `${res.status} ${res.statusText}`;
-    throw new Error(msg);
+    const text = await res.text();
+    throw new Error(text);
   }
-  return data as T;
+
+  // ✅ SAFE RESPONSE HANDLING (prevents crash on empty response)
+  const contentType = res.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return await res.json();
+  }
+
+  return null as T;
 }
 
+// 🔐 LOGIN
 export async function login(email: string, password: string): Promise<string> {
   const body = new URLSearchParams();
   body.set("username", email);
@@ -52,14 +64,31 @@ export async function login(email: string, password: string): Promise<string> {
     },
     body,
   });
-  const data = (await res.json()) as TokenResponse;
-  if (!res.ok) {
-    throw new Error((data as any)?.detail ?? "Login failed");
+
+  let data: any = null;
+
+  try {
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("application/json")) {
+      data = await res.json();
+    }
+  } catch {
+    // ignore parsing error
   }
+
+  if (!res.ok) {
+    throw new Error(data?.detail ?? `Login failed (${res.status})`);
+  }
+
+  if (!data?.access_token) {
+    throw new Error("Invalid login response from server");
+  }
+
   setToken(data.access_token);
   return data.access_token;
 }
 
+// 📝 REGISTER
 export async function register(payload: {
   email: string;
   full_name: string;
@@ -70,9 +99,7 @@ export async function register(payload: {
     "/auth/register",
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    },
+    }
   );
 }
-
