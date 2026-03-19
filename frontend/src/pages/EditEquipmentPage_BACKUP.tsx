@@ -7,7 +7,7 @@ import { Layout } from "../components/Layout";
 type Equipment = {
     asset_tag?: string;
     equipment_name?: string;
-    acquisition_type?: string;
+    ownership_type?: string;
     serial_number?: string;
     manufacturer?: string;
     model?: string;
@@ -28,7 +28,7 @@ export function EditEquipmentPage() {
     const [form, setForm] = useState<Equipment>({
         asset_tag: "",
         equipment_name: "",
-        acquisition_type: "Owned",
+        ownership_type: "Owned",
         serial_number: "",
         manufacturer: "",
         model: "",
@@ -40,19 +40,7 @@ export function EditEquipmentPage() {
     const [departments, setDepartments] = useState<Department[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // 🔥 Normalize acquisition consistently
-    function normalize(value?: string) {
-        if (!value) return "Owned";
-
-        const v = value.toLowerCase();
-
-        if (["tie-up", "tieup", "tie up", "leased"].includes(v)) return "Tie-up";
-        if (["owned", "own"].includes(v)) return "Owned";
-
-        return "Owned";
-    }
-
-    // 🔹 Load Equipment + Departments
+    // 🔹 Load equipment + departments
     useEffect(() => {
         async function fetchData() {
             try {
@@ -66,7 +54,7 @@ export function EditEquipmentPage() {
                 setForm({
                     asset_tag: equipmentData?.asset_tag ?? "",
                     equipment_name: equipmentData?.equipment_name ?? "",
-                    acquisition_type: normalize(equipmentData?.acquisition_type),
+                    ownership_type: equipmentData?.ownership_type ?? "Owned",
                     serial_number: equipmentData?.serial_number ?? "",
                     manufacturer: equipmentData?.manufacturer ?? "",
                     model: equipmentData?.model ?? "",
@@ -77,7 +65,7 @@ export function EditEquipmentPage() {
 
                 setDepartments(deptData || []);
             } catch (err) {
-                showError("Failed to load equipment data");
+                showError("Failed to load data");
             } finally {
                 setLoading(false);
             }
@@ -86,7 +74,7 @@ export function EditEquipmentPage() {
         fetchData();
     }, [id]);
 
-    // 🔹 Handle input change
+    // 🔹 Handle change
     function handleChange(
         e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
     ) {
@@ -98,7 +86,7 @@ export function EditEquipmentPage() {
         }));
     }
 
-    // 🔹 Submit update
+    // 🔹 Submit
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
 
@@ -110,18 +98,10 @@ export function EditEquipmentPage() {
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({
-                    ...form,
-                    acquisition_type: normalize(form.acquisition_type),
-                }),
+                body: JSON.stringify(form),
             });
 
             navigate("/equipment");
-
-            setTimeout(() => {
-                window.location.reload();
-            }, 100);
-
         } catch (err) {
             showError("Failed to update equipment");
         }
@@ -138,7 +118,7 @@ export function EditEquipmentPage() {
     return (
         <Layout>
             <div style={{ maxWidth: "700px", margin: "0 auto" }}>
-
+                {/* 🔙 Back Button */}
                 <button
                     onClick={() => navigate("/equipment")}
                     style={{
@@ -154,6 +134,9 @@ export function EditEquipmentPage() {
                 </button>
 
                 <h1>Edit Equipment</h1>
+                <p style={{ color: "#666", marginBottom: "20px" }}>
+                    Update device information in your inventory
+                </p>
 
                 <form
                     onSubmit={handleSubmit}
@@ -169,44 +152,49 @@ export function EditEquipmentPage() {
                 >
                     <input
                         name="asset_tag"
+                        placeholder="Asset Tag"
                         value={form.asset_tag}
                         onChange={handleChange}
                     />
 
                     <input
                         name="equipment_name"
+                        placeholder="Equipment Name"
                         value={form.equipment_name}
                         onChange={handleChange}
                     />
 
-                    {/* 🔥 FIXED DROPDOWN */}
                     <select
-                        name="acquisition_type"
-                        value={form.acquisition_type || "Owned"}
+                        name="ownership_type"
+                        value={form.ownership_type}
                         onChange={handleChange}
                     >
                         <option value="Owned">Owned</option>
-                        <option value="Tie-up">Tie-up</option>
+                        <option value="Leased">Leased</option>
                     </select>
 
                     <input
                         name="serial_number"
+                        placeholder="Serial Number"
                         value={form.serial_number}
                         onChange={handleChange}
                     />
 
                     <input
                         name="manufacturer"
+                        placeholder="Manufacturer"
                         value={form.manufacturer}
                         onChange={handleChange}
                     />
 
                     <input
                         name="model"
+                        placeholder="Model (Optional)"
                         value={form.model}
                         onChange={handleChange}
                     />
 
+                    {/* ✅ Department dropdown (auto-selected) */}
                     <select
                         name="department_id"
                         value={form.department_id}
@@ -229,11 +217,24 @@ export function EditEquipmentPage() {
 
                     <input
                         name="lifecycle_years"
+                        placeholder="Lifecycle Years"
                         value={form.lifecycle_years}
                         onChange={handleChange}
                     />
 
-                    <button type="submit">
+                    <button
+                        type="submit"
+                        style={{
+                            marginTop: "10px",
+                            padding: "12px",
+                            background: "#4f46e5",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontWeight: "bold",
+                        }}
+                    >
                         Save Changes
                     </button>
                 </form>

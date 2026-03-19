@@ -19,7 +19,7 @@ class Equipment(Base):
     manufacturer = Column(String(255), nullable=True)
     model = Column(String(255), nullable=True)
 
-    # ✅ NEW FIELD — Acquisition Type
+    # ✅ Acquisition Type
     acquisition_type = Column(String(20), default="Owned")
 
     # =====================================================
@@ -80,7 +80,6 @@ class Equipment(Base):
     def current_operating_hours(self):
         """
         Returns latest machine hour reading.
-        Used for dialysis lifecycle tracking.
         """
         if not self.readings:
             return None
@@ -98,7 +97,7 @@ class Equipment(Base):
     @property
     def remaining_life_years(self):
         """
-        Remaining life for standard equipment.
+        Remaining life for standard equipment (CAN GO NEGATIVE).
         """
         if self.lifecycle_type != "years":
             return None
@@ -111,14 +110,15 @@ class Equipment(Base):
         age_days = (today - self.installation_date).days
         age_years = age_days / 365
 
+        # ✅ FIX: Allow negative values
         remaining = self.lifecycle_years - age_years
 
-        return round(max(remaining, 0), 2)
+        return round(remaining, 2)
 
     @property
     def remaining_life_months(self):
         """
-        Converts remaining years into months.
+        Converts remaining years into months (CAN GO NEGATIVE).
         """
         years = self.remaining_life_years
 
@@ -130,8 +130,7 @@ class Equipment(Base):
     @property
     def remaining_operating_months_calc(self):
         """
-        Dialysis lifecycle calculation.
-        Remaining months based on operating hours.
+        Dialysis lifecycle calculation (CAN GO NEGATIVE).
         """
         if self.lifecycle_type != "hours":
             return None
@@ -144,10 +143,10 @@ class Equipment(Base):
         if current is None:
             return None
 
+        # ✅ FIX: Allow negative hours
         remaining_hours = self.max_operating_hours - current
 
-        if remaining_hours <= 0:
-            return 0
-
         # Dialysis assumption: 360 hours/month
-        return int(remaining_hours / 360)
+        remaining_months = remaining_hours / 360
+
+        return int(remaining_months)

@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from typing import Optional
 
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from .models import EquipmentStatus, LogType, UserRole, TicketStatus
 
@@ -77,76 +77,46 @@ class DepartmentOut(DepartmentBase):
 
 
 # =========================================================
-# EQUIPMENT BASE (🔥 FINAL FIXED)
+# EQUIPMENT BASE (🔥 CLEAN)
 # =========================================================
 
 class EquipmentBase(BaseModel):
-    asset_tag: str
+    asset_tag: Optional[str] = None
+    equipment_name: Optional[str] = None
+    serial_number: Optional[str] = None
 
-    # 🔥 REQUIRED NOW (NO MORE NULL)
-    equipment_name: str
-
-    # DB compatibility
-    name: Optional[str] = None
+    # 🔥 SINGLE SOURCE OF TRUTH
+    acquisition_type: Optional[str] = Field(default="Owned")
 
     manufacturer: Optional[str] = None
     model: Optional[str] = None
-    serial_number: Optional[str] = None
-
-    acquisition_type: Optional[str] = "Owned"
-    status: EquipmentStatus = EquipmentStatus.active
-
     department_id: Optional[str] = None
 
-    # ✅ CLEAN STRINGS
-    @field_validator("department_id", "manufacturer", "model", "serial_number", mode="before")
+    installation_date: Optional[date] = None
+    lifecycle_years: Optional[int] = None
+    lifecycle_type: Optional[str] = None
+
+    max_operating_hours: Optional[int] = None
+    current_reading: Optional[int] = None
+
+    status: Optional[EquipmentStatus] = EquipmentStatus.active
+
+    @field_validator("*", mode="before")
     @classmethod
-    def clean_strings(cls, v):
+    def clean_all(cls, v):
         return empty_to_none(v)
 
 
 # =========================================================
-# EQUIPMENT CREATE (🔥 HARD SYNC)
+# EQUIPMENT CREATE
 # =========================================================
 
 class EquipmentCreate(EquipmentBase):
-    location_id: Optional[str] = None
-    installation_date: Optional[date] = None
+    equipment_name: str
 
-    lifecycle_type: Optional[str] = "years"
-    lifecycle_years: Optional[int] = None
-    max_operating_hours: Optional[int] = None
-
-    # 🔥 HARD SYNC (NO FAILURES)
-    @field_validator("name", mode="before")
+    @field_validator("lifecycle_years", "max_operating_hours", mode="before")
     @classmethod
-    def force_name(cls, v, values):
-        eq_name = values.data.get("equipment_name")
-        if eq_name:
-            return eq_name
-        return v
-
-    @field_validator("location_id", "installation_date", "lifecycle_type", mode="before")
-    @classmethod
-    def clean_general(cls, v):
-        return empty_to_none(v)
-
-    @field_validator("installation_date", mode="before")
-    @classmethod
-    def parse_date(cls, v):
-        if v in ["", None]:
-            return None
-        if isinstance(v, date):
-            return v
-        try:
-            return datetime.fromisoformat(v).date()
-        except Exception:
-            return None
-
-    @field_validator("lifecycle_years", mode="before")
-    @classmethod
-    def convert_years(cls, v):
-        v = empty_to_none(v)
+    def convert_numbers(cls, v):
         if v is None:
             return None
         try:
@@ -154,10 +124,41 @@ class EquipmentCreate(EquipmentBase):
         except:
             return None
 
-    @field_validator("max_operating_hours", mode="before")
+
+# =========================================================
+# EQUIPMENT UPDATE (🔥 FIXED)
+# =========================================================
+
+class EquipmentUpdate(BaseModel):
+    asset_tag: Optional[str] = None
+    equipment_name: Optional[str] = None
+    serial_number: Optional[str] = None
+
+    # 🔥 CRITICAL FIELD
+    acquisition_type: Optional[str] = None
+
+    manufacturer: Optional[str] = None
+    model: Optional[str] = None
+    department_id: Optional[str] = None
+
+    installation_date: Optional[date] = None
+    lifecycle_years: Optional[int] = None
+    lifecycle_type: Optional[str] = None
+
+    max_operating_hours: Optional[int] = None
+    current_reading: Optional[int] = None
+
+    status: Optional[EquipmentStatus] = None
+    risk_priority: Optional[int] = None
+
+    @field_validator("*", mode="before")
     @classmethod
-    def convert_hours(cls, v):
-        v = empty_to_none(v)
+    def clean_all(cls, v):
+        return empty_to_none(v)
+
+    @field_validator("lifecycle_years", "max_operating_hours", mode="before")
+    @classmethod
+    def convert_numbers(cls, v):
         if v is None:
             return None
         try:
@@ -173,17 +174,8 @@ class EquipmentCreate(EquipmentBase):
 class EquipmentOut(EquipmentBase):
     id: str
 
-    location_id: Optional[str] = None
-    installation_date: Optional[date] = None
-
-    lifecycle_type: Optional[str] = None
-    lifecycle_years: Optional[int] = None
-
     remaining_life_years: Optional[float] = None
     remaining_life_months: Optional[int] = None
-
-    max_operating_hours: Optional[int] = None
-    current_operating_hours: Optional[int] = None
 
     remaining_operating_months: Optional[int] = None
 
@@ -209,63 +201,11 @@ class EquipmentOut(EquipmentBase):
 
 
 # =========================================================
-# EQUIPMENT STATUS UPDATE
+# EQUIPMENT UPDATE STATUS
 # =========================================================
 
 class EquipmentUpdateStatus(BaseModel):
     status: EquipmentStatus
-
-
-# =========================================================
-# EQUIPMENT UPDATE (SAFE SYNC)
-# =========================================================
-
-class EquipmentUpdate(BaseModel):
-    asset_tag: Optional[str] = None
-
-    equipment_name: Optional[str] = None
-    name: Optional[str] = None
-
-    manufacturer: Optional[str] = None
-    model: Optional[str] = None
-    serial_number: Optional[str] = None
-
-    acquisition_type: Optional[str] = None
-    status: Optional[EquipmentStatus] = None
-
-    department_id: Optional[str] = None
-    location_id: Optional[str] = None
-
-    installation_date: Optional[date] = None
-
-    lifecycle_type: Optional[str] = None
-    lifecycle_years: Optional[int] = None
-    max_operating_hours: Optional[int] = None
-
-    risk_priority: Optional[int] = None
-
-    # ✅ SAFE SYNC (UPDATE ONLY)
-    @field_validator("name", mode="before")
-    @classmethod
-    def sync_name(cls, v, values):
-        if not v and values.data.get("equipment_name"):
-            return values.data.get("equipment_name")
-        return v
-
-    @field_validator("*", mode="before")
-    @classmethod
-    def clean_all(cls, v):
-        return empty_to_none(v)
-
-    @field_validator("lifecycle_years", "max_operating_hours", mode="before")
-    @classmethod
-    def convert_numbers(cls, v):
-        if v is None:
-            return None
-        try:
-            return int(v)
-        except:
-            return None
 
 
 # =========================================================

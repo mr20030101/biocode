@@ -1,4 +1,4 @@
-# Biocode - Git Ignore File
+ # Biocode - Git Ignore File
 
 # ============================================
 # Python / Backend
@@ -294,3 +294,20 @@ secrets/
 # Keep README files
 !README.md
 !**/README.md
+
+# Node
+node_modules/
+dist/
+.env
+
+# Python
+__pycache__/
+*.pyc
+.env
+
+# Database
+*.sql
+
+# OS
+.DS_Store
+Thumbs.db

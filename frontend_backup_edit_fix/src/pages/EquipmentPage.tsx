@@ -12,7 +12,6 @@ type Equipment = {
   equipment_name?: string
   status?: string
 
-  // ✅ ONLY SOURCE OF TRUTH
   acquisition_type?: "Owned" | "Tie-up"
 
   lifecycle_type?: "years" | "hours"
@@ -219,13 +218,12 @@ export function EquipmentPage() {
 
             const risk = calculateRiskScore(e)
             const isHighRisk = risk > 120
-
-            // ✅ STRICT + SAFE (FINAL FIX)
-            const ownership = e.acquisition_type ?? "Owned"
+            const acquisition = e.acquisition_type ?? "Owned"
 
             let remainingDisplay = "N/A"
             let isExpired = false
 
+            // ✅ YEARS LIFECYCLE
             if (e.lifecycle_type === "years") {
 
               const remaining = e.remaining_life_years
@@ -234,6 +232,7 @@ export function EquipmentPage() {
 
                 if (remaining <= 0) {
                   isExpired = true
+
                   const abs = Math.abs(remaining).toFixed(1)
 
                   remainingDisplay =
@@ -245,7 +244,10 @@ export function EquipmentPage() {
                 }
               }
 
-            } else if (e.lifecycle_type === "hours") {
+            }
+
+            // ✅ HOURS LIFECYCLE (MONTHS VIEW)
+            else if (e.lifecycle_type === "hours") {
 
               const months = e.remaining_operating_months
 
@@ -253,6 +255,7 @@ export function EquipmentPage() {
 
                 if (months <= 0) {
                   isExpired = true
+
                   const abs = Math.abs(months)
 
                   remainingDisplay =
@@ -288,12 +291,12 @@ export function EquipmentPage() {
 
                     <div className="mt-1">
                       <span
-                        className={`px-2 py-1 text-xs rounded ${ownership === "Owned"
+                        className={`px-2 py-1 text-xs rounded ${acquisition === "Owned"
                           ? "bg-green-100 text-green-700"
                           : "bg-blue-100 text-blue-700"
                           }`}
                       >
-                        {ownership}
+                        {acquisition}
                       </span>
                     </div>
 
@@ -388,4 +391,5 @@ export function EquipmentPage() {
     </Layout>
 
   )
+
 }

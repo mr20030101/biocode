@@ -15,7 +15,6 @@ from app.schemas import (
     EquipmentUpdate,
     ServiceHistoryCreate,
     ServiceHistoryOut,
-    ServiceHistoryUpdate,
 )
 
 from app.permissions import (
@@ -95,7 +94,8 @@ def get_equipment(
     current_user: User = Depends(get_current_user),
 ):
     equipment = db.query(Equipment).filter(
-        Equipment.id == equipment_id).first()
+        Equipment.id == equipment_id
+    ).first()
 
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -113,7 +113,8 @@ def get_service_history(
     current_user: User = Depends(get_current_user),
 ):
     equipment = db.query(Equipment).filter(
-        Equipment.id == equipment_id).first()
+        Equipment.id == equipment_id
+    ).first()
 
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -137,7 +138,8 @@ def add_service_history(
     current_user: User = Depends(get_current_user),
 ):
     equipment = db.query(Equipment).filter(
-        Equipment.id == equipment_id).first()
+        Equipment.id == equipment_id
+    ).first()
 
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -174,7 +176,7 @@ def add_service_history(
 
 
 # =========================================================
-# CREATE EQUIPMENT 🔥 FIXED ONLY HERE
+# CREATE EQUIPMENT
 # =========================================================
 @router.post("/", response_model=EquipmentOut)
 def create_equipment(
@@ -187,32 +189,28 @@ def create_equipment(
 
     data = payload.model_dump()
 
-    # 🔥 HARD VALIDATION
     if not data.get("equipment_name"):
         raise HTTPException(
-            status_code=400, detail="Equipment name is required")
+            status_code=400, detail="Equipment name is required"
+        )
 
-    # ✅ SAFE acquisition_type
-    acquisition = data.get("acquisition_type") or "Owned"
-    if acquisition not in ["Owned", "Tie-up"]:
-        acquisition = "Owned"
+    acquisition = (data.get("acquisition_type") or "Owned").strip()
     data["acquisition_type"] = acquisition
 
-    # 🔥 FIXED FIELD FILTER
     allowed_fields = {
         "asset_tag",
-        "equipment_name",  # ✅ FIX
+        "equipment_name",
         "model",
         "brand",
         "serial_number",
-        "location_id",     # ✅ FIX
+        "location_id",
         "department_id",
         "status",
         "acquisition_type",
         "installation_date",
         "lifecycle_type",
         "lifecycle_years",
-        "max_operating_hours",  # ✅ FIX
+        "max_operating_hours",
     }
 
     filtered_data = {k: v for k, v in data.items() if k in allowed_fields}
@@ -243,7 +241,8 @@ def update_equipment_status(
         raise HTTPException(status_code=403, detail="Supervisor required")
 
     equipment = db.query(Equipment).filter(
-        Equipment.id == equipment_id).first()
+        Equipment.id == equipment_id
+    ).first()
 
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -267,7 +266,7 @@ def update_equipment_status(
 
 
 # =========================================================
-# FULL UPDATE
+# FULL UPDATE 🔥 STRICT (WITH DEBUG)
 # =========================================================
 @router.put("/{equipment_id}", response_model=EquipmentOut)
 def update_equipment(
@@ -280,20 +279,19 @@ def update_equipment(
         raise HTTPException(status_code=403, detail="Manager required")
 
     equipment = db.query(Equipment).filter(
-        Equipment.id == equipment_id).first()
+        Equipment.id == equipment_id
+    ).first()
 
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
 
+    # 🧪 DEBUG — VERIFY FRONTEND PAYLOAD
+    print("🔥 PAYLOAD RECEIVED:", payload.model_dump())
+
     update_data = payload.model_dump(exclude_unset=True)
 
-    if "acquisition_type" in update_data:
-        acquisition = update_data["acquisition_type"]
-        if acquisition not in ["Owned", "Tie-up"]:
-            update_data["acquisition_type"] = "Owned"
-
-    for field, value in update_data.items():
-        setattr(equipment, field, value)
+    for key, value in update_data.items():
+        setattr(equipment, key, value)
 
     db.commit()
     db.refresh(equipment)
@@ -314,7 +312,8 @@ def delete_equipment(
         raise HTTPException(status_code=403, detail="Manager required")
 
     equipment = db.query(Equipment).filter(
-        Equipment.id == equipment_id).first()
+        Equipment.id == equipment_id
+    ).first()
 
     if not equipment:
         raise HTTPException(status_code=404, detail="Equipment not found")
@@ -363,7 +362,10 @@ def equipment_dashboard(
         if eq.pm_alert in ["pm_required", "no_pm_record"]:
             stats["pm_overdue"] += 1
 
-        if eq.remaining_operating_months is not None and eq.remaining_operating_months <= 6:
+        if (
+            eq.remaining_operating_months is not None
+            and eq.remaining_operating_months <= 6
+        ):
             stats["near_end_of_life"] += 1
 
     return {"stats": stats}
